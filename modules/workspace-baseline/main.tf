@@ -43,16 +43,16 @@ resource "databricks_disable_legacy_dbfs_setting" "this" {
 
 # Built-in "users" group: can log in and use SQL, cannot create clusters freely
 # (teams get cluster policies instead).
-data "databricks_group" "users" {
-  display_name = "users"
-}
+#data "databricks_group" "users" {
+#  display_name = "users"
+#}
 
-resource "databricks_entitlements" "users" {
-  group_id              = data.databricks_group.users.id
-  workspace_access      = true
-  databricks_sql_access = true
-  allow_cluster_create  = false
-}
+#resource "databricks_entitlements" "users" {
+#  group_id              = data.databricks_group.users.id
+#  workspace_access      = true
+#  databricks_sql_access = true
+#  allow_cluster_create  = false
+#}
 
 # Parent folder for every team's folder (/Teams/<team>).
 resource "databricks_directory" "teams" {
