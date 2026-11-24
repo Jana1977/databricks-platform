@@ -5,19 +5,19 @@ description: Customer pod platform services
 environments: [int]          # add qa when the team is ready: [int, qa]
 
 managers:
-  - cpps-lead@example.com    # CHANGE ME
+  - admin@data.com    # CHANGE ME
 members:
-  - cpps-engineer@example.com   # CHANGE ME
+  - dmin@datajilla.com    # CHANGE ME
 
 groups:
   analysts:
-    - cpps-analyst@example.com  # CHANGE ME
+    - admin@datajilla.com   # CHANGE ME
 
 service_principals:
   - reporting
 
 job_repos:
-  - my-org/databricks-jobs   # CHANGE ME: <github-org>/<jobs repo>
+  - Jana1977/databricks-jobs   # CHANGE ME: <github-org>/<jobs repo>
 
 compute:
   node_types: [m5d.large, m5d.xlarge, m5d.2xlarge]

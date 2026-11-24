@@ -6,14 +6,14 @@ environment: int            # must match the file name
 name_prefix: dbx            # prefix of every AWS and account-level name (2-10 lower-case letters/digits)
 
 aws:
-  account_id: "111111111111"   # CHANGE ME: AWS account for int (12 digits, keep the quotes)
+  account_id: "457961354417"   # CHANGE ME: AWS account for int (12 digits, keep the quotes)
   region: us-east-1            # CHANGE ME if needed: region of the workspace and the state bucket
 
 databricks:
-  account_id: "00000000-0000-0000-0000-000000000000"   # CHANGE ME: Databricks account console > top-right menu
+  account_id: "04bca642-57aa-42cb-8774-607a0d8286a0"   # CHANGE ME: Databricks account console > top-right menu
   workspace_name: ""          # empty = <name_prefix>-<env>, for example dbx-int
   admins:                     # CHANGE ME: people who administer this workspace (must exist in the Databricks account)
-    - platform-admin@example.com
+    - admin@datajilla.com
   create_users: false         # true = create the users above / in team files if missing (sandbox accounts with no identity sync)
 
 unity_catalog:
