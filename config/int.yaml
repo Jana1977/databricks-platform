@@ -3,7 +3,7 @@
 # Replace every value marked CHANGE ME before the first run.
 
 environment: int            # must match the file name
-name_prefix: dbx            # prefix of every AWS and account-level name (2-10 lower-case letters/digits)
+name_prefix: autocfa        # prefix of every AWS and account-level name (2-10 lower-case letters/digits); must equal name_prefix in bootstrap/int.tfvars
 
 aws:
   account_id: "457961354417"   # CHANGE ME: AWS account for int (12 digits, keep the quotes)
@@ -19,7 +19,7 @@ databricks:
 unity_catalog:
   metastore_id: ""            # empty = use the metastore that already exists in aws.region
   create_metastore: false     # true only if the region has no metastore yet (one per region per account)
-  assign_metastore: true      # false if the new workspace is already attached to the metastore automatically
+  assign_metastore: false     # false if the new workspace is already attached to the metastore automatically
   platform_catalog: true      # create the shared int_platform catalog
 
 network:
