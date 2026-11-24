@@ -1,0 +1,42 @@
+# Example team. Replace the e-mail addresses and the job repo before the first run.
+
+name: cpps
+description: Customer pod platform services
+environments: [int]          # add qa when the team is ready: [int, qa]
+
+managers:
+  - cpps-lead@example.com    # CHANGE ME
+members:
+  - cpps-engineer@example.com   # CHANGE ME
+
+groups:
+  analysts:
+    - cpps-analyst@example.com  # CHANGE ME
+
+service_principals:
+  - reporting
+
+job_repos:
+  - my-org/databricks-jobs   # CHANGE ME: <github-org>/<jobs repo>
+
+compute:
+  node_types: [m5d.large, m5d.xlarge, m5d.2xlarge]
+  max_workers: 4
+  allow_interactive: true
+  autotermination_minutes: 30
+  max_clusters_per_user: 2
+
+sql_warehouse:
+  enabled: true
+  size: 2X-Small
+  auto_stop_minutes: 10
+  max_clusters: 1
+
+catalog:
+  schemas: [raw, curated]
+
+secret_scope: true
+
+budget:
+  monthly_usd: 500
+  alert_emails: []

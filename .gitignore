@@ -1,0 +1,16 @@
+# Terraform working files
+.terraform/
+*.tfstate
+*.tfstate.*
+*.tfstate.d/
+tfplan
+crash.log
+.plans/
+.terraform-plugin-cache/
+
+# Bootstrap inputs (copy from *.tfvars.example)
+bootstrap/*.tfvars
+
+# Local secrets
+.env
+*.pem

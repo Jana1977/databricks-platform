@@ -1,0 +1,24 @@
+# Test fixture: every optional feature switched on.
+environment: int
+aws:
+  account_id: "111111111111"
+  region: us-east-1
+databricks:
+  account_id: "00000000-0000-0000-0000-000000000000"
+  admins: [admin@example.com]
+  create_users: true
+unity_catalog:
+  create_metastore: true
+network:
+  vpc_cidr: 10.20.0.0/16
+  private_subnet_cidrs: [10.20.0.0/19, 10.20.32.0/19]
+  public_subnet_cidrs: [10.20.64.0/24, 10.20.65.0/24]
+  nat_gateway_count: 2
+  interface_endpoints: true
+  flow_logs: true
+  privatelink:
+    enabled: true
+    subnet_cidrs: [10.20.66.0/27, 10.20.66.32/27]
+    public_access_enabled: false
+safety:
+  allow_destroy_data: false

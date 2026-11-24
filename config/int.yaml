@@ -1,0 +1,56 @@
+# Platform settings for the int environment.
+# Nothing here is secret: commit this file. Secrets live in GitHub environment secrets.
+# Replace every value marked CHANGE ME before the first run.
+
+environment: int            # must match the file name
+name_prefix: dbx            # prefix of every AWS and account-level name (2-10 lower-case letters/digits)
+
+aws:
+  account_id: "111111111111"   # CHANGE ME: AWS account for int (12 digits, keep the quotes)
+  region: us-east-1            # CHANGE ME if needed: region of the workspace and the state bucket
+
+databricks:
+  account_id: "00000000-0000-0000-0000-000000000000"   # CHANGE ME: Databricks account console > top-right menu
+  workspace_name: ""          # empty = <name_prefix>-<env>, for example dbx-int
+  admins:                     # CHANGE ME: people who administer this workspace (must exist in the Databricks account)
+    - platform-admin@example.com
+  create_users: false         # true = create the users above / in team files if missing (sandbox accounts with no identity sync)
+
+unity_catalog:
+  metastore_id: ""            # empty = use the metastore that already exists in aws.region
+  create_metastore: false     # true only if the region has no metastore yet (one per region per account)
+  assign_metastore: true      # false if the new workspace is already attached to the metastore automatically
+  platform_catalog: true      # create the shared int_platform catalog
+
+network:
+  vpc_cidr: 10.20.0.0/16
+  private_subnet_cidrs:       # Databricks compute, one per AZ (each /17 to /26)
+    - 10.20.0.0/19
+    - 10.20.32.0/19
+  public_subnet_cidrs:        # NAT gateways
+    - 10.20.64.0/24
+    - 10.20.65.0/24
+  availability_zones: []      # empty = first 2 zones in the region
+  nat_gateway_count: 1        # 1 keeps int cheap
+  interface_endpoints: false  # STS + Kinesis endpoints (hourly cost)
+  flow_logs: false
+  privatelink:
+    enabled: false            # needs the Databricks Enterprise tier
+    subnet_cidrs:
+      - 10.20.66.0/27
+      - 10.20.66.32/27
+    public_access_enabled: true
+    workspace_service: ""     # empty = built-in value for us-east-1, us-east-2, us-west-2
+    relay_service: ""
+
+workspace:
+  token_max_lifetime_days: 90
+  ip_allow_list: []           # careful: CI must still reach the workspace
+  restrict_workspace_admins: true
+  disable_legacy_features: true
+
+safety:
+  allow_destroy_data: true    # int is for testing: destroy may delete buckets, catalogs and tables
+
+tags:
+  cost_center: data-platform

@@ -1,0 +1,45 @@
+# Copy this file to teams/<team>.yaml to onboard a team.
+# Files whose name starts with _ are ignored.
+# Only `name`, `environments` and `managers` are required; everything else has the default shown.
+
+name: myteam                 # REQUIRED: same as the file name; 2-20 lower-case letters/digits
+description: What the team does
+environments: [int]          # REQUIRED: where the team exists. Start with [int]; add qa later.
+
+managers:                    # REQUIRED: team admins (manage folder, secrets, warehouse; full catalog access)
+  - lead@example.com
+members:                     # everyone else in the team (read access to the catalog, can use the warehouse)
+  - engineer@example.com
+
+groups: {}                   # extra groups: <name>: [emails] -> account group <prefix>-<env>-<team>-<name>
+#  analysts:
+#    - analyst@example.com
+
+service_principals: []       # extra service principals besides <prefix>-<env>-<team>-deploy (read-only access)
+#  - reporting
+
+job_repos:                   # GitHub repos that may deploy this team's jobs (org/repo, exact case)
+  - my-org/databricks-jobs
+
+compute:
+  node_types: [m5d.large, m5d.xlarge]   # EC2 types the team's clusters may use; the first is the default
+  max_workers: 4
+  allow_interactive: true               # create <team>-interactive-policy for notebook clusters
+  autotermination_minutes: 30           # longest idle time for interactive clusters
+  max_clusters_per_user: 2
+
+sql_warehouse:
+  enabled: true
+  size: 2X-Small             # 2X-Small, X-Small, Small, Medium, Large, X-Large, 2X-Large, 3X-Large, 4X-Large
+  auto_stop_minutes: 10
+  max_clusters: 1
+  serverless: false          # true only if serverless SQL is enabled for the account
+
+catalog:
+  schemas: [raw, curated]    # schemas created in catalog <env>_<team>
+
+secret_scope: true           # secret scope named <team>
+
+budget:
+  monthly_usd: 0             # 0 = no budget alert
+  alert_emails: []           # empty = the managers

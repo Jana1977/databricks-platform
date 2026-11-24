@@ -1,0 +1,1293 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Databricks on AWS: step-by-step guide</title>
+<style>
+  :root {
+    --bg: #0d1117; --panel: #161b22; --panel2: #1c2330; --line: #2d3748; --text: #e6edf3; --muted: #8b949e;
+    --blue: #4aa3ff; --green: #3fb950; --yellow: #d29922; --red: #f85149; --purple: #a371f7; --orange: #f0883e; --teal: #39c5cf; --gray: #8b949e;
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body { margin: 0; font: 15px/1.55 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background: var(--bg); color: var(--text); }
+  a { color: var(--blue); }
+  code, pre, .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 13px; }
+  code { background: #0b1320; border: 1px solid var(--line); border-radius: 4px; padding: 1px 5px; word-break: break-word; }
+  header { padding: 34px 24px 14px; max-width: 1180px; margin: 0 auto; }
+  header h1 { margin: 0 0 6px; font-size: 30px; }
+  header p { margin: 4px 0; color: var(--muted); max-width: 920px; }
+  nav { position: sticky; top: 0; z-index: 20; background: rgba(13,17,23,.95); backdrop-filter: blur(6px); border-bottom: 1px solid var(--line); }
+  nav .in { max-width: 1180px; margin: 0 auto; display: flex; gap: 2px; align-items: center; padding: 7px 16px; overflow-x: auto; scrollbar-width: none; }
+  nav .in::-webkit-scrollbar { display: none; }
+  nav a { color: var(--muted); text-decoration: none; padding: 5px 8px; border-radius: 6px; white-space: nowrap; font-size: 13.5px; }
+  nav a:hover, nav a.active { color: var(--text); background: var(--panel2); }
+  nav .progress { margin-left: auto; display: flex; align-items: center; gap: 8px; color: var(--muted); font-size: 13px; white-space: nowrap; }
+  nav .bar { width: 70px; height: 8px; background: var(--panel2); border-radius: 4px; overflow: hidden; }
+  nav .bar i { display: block; height: 100%; width: 0; background: var(--green); transition: width .3s; }
+  main { max-width: 1180px; margin: 0 auto; padding: 0 24px 80px; }
+  section.block { padding-top: 34px; }
+  h2 { font-size: 24px; margin: 0 0 6px; }
+  h2 .n { color: var(--blue); font-family: ui-monospace, monospace; margin-right: 8px; font-size: 18px; }
+  h3 { margin: 16px 0 8px; font-size: 16px; }
+  .lead { color: var(--muted); margin: 0 0 14px; max-width: 920px; }
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 16px 18px; margin: 12px 0; }
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  @media (max-width: 900px) { .grid2 { grid-template-columns: 1fr; } }
+  table { width: 100%; border-collapse: collapse; font-size: 14px; }
+  th, td { text-align: left; padding: 7px 9px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { color: var(--muted); font-weight: 600; font-size: 12px; text-transform: uppercase; letter-spacing: .03em; }
+  .muted { color: var(--muted); }
+  .pill { display: inline-block; font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 999px; border: 1px solid; white-space: nowrap; }
+  .btn { background: var(--panel2); color: var(--text); border: 1px solid var(--line); border-radius: 7px; padding: 6px 13px; cursor: pointer; font-size: 13px; }
+  .btn:hover { border-color: var(--blue); }
+  .btn.primary { background: #1f6feb; border-color: #1f6feb; }
+
+  /* where / group colours */
+  .c-laptop { color: var(--orange); border-color: var(--orange); }
+  .c-aws { color: var(--yellow); border-color: var(--yellow); }
+  .c-dbx { color: var(--red); border-color: var(--red); }
+  .c-gh { color: var(--purple); border-color: var(--purple); }
+  .c-ci { color: var(--blue); border-color: var(--blue); }
+  .c-file { color: var(--green); border-color: var(--green); }
+  .c-uc { color: var(--teal); border-color: var(--teal); }
+  .c-ws { color: #ff7eb6; border-color: #ff7eb6; }
+  .c-data { color: var(--gray); border-color: var(--gray); }
+
+  /* values form */
+  .values { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px 14px; }
+  @media (max-width: 900px) { .values { grid-template-columns: 1fr 1fr; } }
+  .values label { display: block; font-size: 12px; color: var(--muted); margin-bottom: 3px; }
+  .values input { width: 100%; background: #0b1320; color: var(--text); border: 1px solid var(--line); border-radius: 6px; padding: 7px 9px; font: 13px ui-monospace, monospace; }
+  .values input:focus { outline: none; border-color: var(--blue); }
+
+  /* journey map */
+  .journey { display: grid; grid-template-columns: repeat(7, 1fr); gap: 8px; margin: 12px 0 6px; }
+  @media (max-width: 900px) { .journey { grid-template-columns: repeat(3, 1fr); } }
+  .jstep { background: var(--panel2); border: 1px solid var(--line); border-radius: 9px; padding: 8px 9px; cursor: pointer; transition: border-color .25s, transform .25s, box-shadow .25s; position: relative; }
+  .jstep .num { font: 700 12px ui-monospace, monospace; color: var(--blue); }
+  .jstep .nm { font-size: 13px; font-weight: 600; line-height: 1.3; margin-top: 2px; }
+  .jstep .ok { position: absolute; top: 6px; right: 8px; color: var(--green); font-size: 13px; display: none; }
+  .jstep.done .ok { display: block; }
+  .jstep.done { border-color: rgba(63,185,80,.55); }
+  .jstep.here { border-color: var(--blue); box-shadow: 0 0 0 3px rgba(74,163,255,.18); transform: translateY(-2px); }
+  .tourbar { display: flex; gap: 8px; align-items: center; margin-top: 8px; flex-wrap: wrap; }
+
+  /* a step section */
+  .sstep { background: var(--panel); border: 1px solid var(--line); border-left: 4px solid var(--line); border-radius: 12px; padding: 18px 20px 16px; margin: 22px 0; scroll-margin-top: 70px; transition: border-color .3s; }
+  .sstep.done { border-left-color: var(--green); }
+  .shead { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+  .shead .badge { font: 800 15px ui-monospace, monospace; background: #1f6feb; color: #fff; border-radius: 8px; padding: 3px 9px; }
+  .shead h3 { margin: 0; font-size: 19px; flex: 1; min-width: 240px; }
+  .shead .time { color: var(--muted); font-size: 13px; }
+  .shead label { font-size: 13px; color: var(--muted); display: flex; gap: 6px; align-items: center; cursor: pointer; }
+  .shead input { width: 17px; height: 17px; accent-color: var(--green); }
+  .plain { background: #0f1a2b; border: 1px solid #1f3554; border-radius: 9px; padding: 10px 14px; margin: 12px 0; }
+  .plain b.t { color: var(--blue); display: block; font-size: 12px; text-transform: uppercase; letter-spacing: .05em; margin-bottom: 2px; }
+
+  /* animated scene: inputs -> action -> outputs */
+  .scene { display: grid; grid-template-columns: 1fr 230px 1fr; gap: 14px; margin: 14px 0 6px; align-items: stretch; }
+  @media (max-width: 900px) { .scene { grid-template-columns: 1fr; } }
+  .col { background: var(--panel2); border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; }
+  .col h5 { margin: 0 0 8px; font-size: 12px; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); }
+  .chip { border: 1px solid var(--line); background: #0b1320; border-radius: 8px; padding: 6px 9px; margin: 6px 0; opacity: 0; transform: translateX(-12px); transition: opacity .35s, transform .35s, border-color .35s; }
+  .col.out .chip { transform: translateX(12px); }
+  .chip.show { opacity: 1; transform: none; }
+  .chip.show.lit { border-color: var(--green); }
+  .chip b { font: 600 12.5px ui-monospace, monospace; display: block; }
+  .chip span { font: 12px ui-monospace, monospace; color: #c9d1d9; word-break: break-all; display: block; }
+  .chip i { font-style: normal; font-size: 11.5px; color: var(--muted); display: block; margin-top: 1px; }
+  .action { display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; background: var(--panel2); border: 1px dashed var(--line); border-radius: 10px; padding: 12px; position: relative; }
+  .action .who { margin-bottom: 6px; }
+  .action .what { font-weight: 700; font-size: 15px; }
+  .action .sub { color: var(--muted); font-size: 12.5px; margin-top: 4px; }
+  .action .meter { width: 100%; height: 8px; background: #0b1320; border-radius: 4px; overflow: hidden; margin-top: 10px; }
+  .action .meter i { display: block; height: 100%; width: 0; background: linear-gradient(90deg, #1f6feb, var(--green)); }
+  .action .arrowL, .action .arrowR { position: absolute; top: 50%; font-size: 18px; color: var(--line); transition: color .3s; }
+  .action .arrowL { left: -15px; } .action .arrowR { right: -15px; }
+  .action.run .arrowL, .action.fin .arrowR { color: var(--green); }
+  .action.run { border-color: var(--blue); }
+  .action.fin { border-color: var(--green); border-style: solid; }
+  @media (max-width: 900px) { .action .arrowL, .action .arrowR { display: none; } }
+
+  /* resources */
+  .reshead { display: flex; justify-content: space-between; align-items: baseline; margin: 14px 0 6px; flex-wrap: wrap; gap: 8px; }
+  .reshead h4 { margin: 0; font-size: 15px; }
+  .count { font: 700 13px ui-monospace, monospace; color: var(--green); }
+  .tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(245px, 1fr)); gap: 8px; }
+  .tile { border: 1px solid var(--line); border-left-width: 3px; border-radius: 8px; padding: 7px 10px; background: var(--panel2); opacity: .28; transition: opacity .3s, border-color .3s, transform .3s; }
+  .tile.creating { opacity: 1; border-color: var(--yellow); transform: scale(1.02); }
+  .tile.made { opacity: 1; transform: none; }
+  .tile .top { display: flex; justify-content: space-between; gap: 6px; align-items: center; }
+  .tile .g { font-size: 10.5px; }
+  .tile .st { font-size: 11px; color: var(--muted); white-space: nowrap; }
+  .tile.creating .st { color: var(--yellow); }
+  .tile.made .st { color: var(--green); }
+  .tile .nm { font: 600 12.5px ui-monospace, monospace; margin-top: 4px; word-break: break-all; }
+  .tile .ty { font: 11.5px ui-monospace, monospace; color: var(--muted); }
+  .tile .wh { font-size: 12.5px; margin-top: 2px; }
+  .console { background: #05080d; border: 1px solid var(--line); border-radius: 8px; padding: 9px 12px; height: 150px; overflow-y: auto; font: 12px/1.5 ui-monospace, monospace; color: #9da7b3; margin-top: 10px; }
+  .console .a { color: var(--green); } .console .c { color: var(--yellow); } .console .h { color: var(--blue); }
+  .playrow { display: flex; gap: 8px; align-items: center; margin-top: 8px; }
+
+  /* how-to */
+  .how { margin-top: 14px; }
+  .how h4, .chk h4, .watch h4 { margin: 0 0 6px; font-size: 15px; }
+  .how ol { padding-left: 22px; margin: 6px 0; }
+  .how li { margin: 6px 0; }
+  .code { position: relative; margin: 8px 0; }
+  .code pre { margin: 0; background: #0b1320; border: 1px solid var(--line); border-radius: 8px; padding: 12px 14px; overflow-x: auto; white-space: pre; color: #c9d1d9; }
+  .code button { position: absolute; top: 6px; right: 6px; background: var(--panel2); color: var(--muted); border: 1px solid var(--line); border-radius: 6px; font-size: 12px; padding: 3px 9px; cursor: pointer; }
+  .code button.ok { color: var(--green); border-color: var(--green); }
+  .twocol { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 12px; }
+  @media (max-width: 900px) { .twocol { grid-template-columns: 1fr; } }
+  .chk, .watch { border-radius: 9px; padding: 10px 14px; }
+  .chk { border: 1px dashed var(--green); }
+  .chk h4 { color: var(--green); }
+  .watch { border: 1px dashed var(--yellow); }
+  .watch h4 { color: var(--yellow); }
+  .chk ul, .watch ul { margin: 4px 0; padding-left: 18px; }
+  .chk li, .watch li { margin: 3px 0; font-size: 14px; }
+  .gloss dt { font-weight: 700; margin-top: 8px; }
+  .gloss dd { margin: 2px 0 0 0; color: #c9d1d9; }
+  footer { color: var(--muted); font-size: 13px; text-align: center; padding: 30px; }
+  @media (prefers-reduced-motion: reduce) { .chip, .tile, .jstep { transition: none; } }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Databricks on AWS: step-by-step guide</h1>
+  <p>This guide takes you from nothing to a running Databricks job, one step at a time. Each step says, in plain words, what it is for, what you give it, what you do, and what it creates. The animation in each step shows the resources appearing in the order they are created.</p>
+  <p>Two GitHub repos do the work: <b>databricks-platform</b> builds the AWS network, the Databricks workspace and each team; <b>databricks-jobs</b> puts a team's jobs into that workspace. You set up <b>int</b> now; <b>qa</b> is the same later.</p>
+</header>
+
+<nav>
+  <div class="in">
+    <a href="#values">Your values</a>
+    <a href="#map">The 14 steps</a>
+    <a href="#s1">1-5 Setup</a>
+    <a href="#s6">6-10 Platform pipeline</a>
+    <a href="#s11">11-14 Job pipeline</a>
+    <a href="#team">New team</a>
+    <a href="#qa">qa</a>
+    <a href="#teardown">Tear down</a>
+    <a href="#reference">Parameters</a>
+    <a href="#trouble">Troubleshooting</a>
+    <a href="#glossary">Glossary</a>
+    <span class="progress"><span id="progTxt">0 / 0</span><span class="bar"><i id="progBar"></i></span><button class="btn" id="resetProgress" style="padding:3px 8px" title="Clear all ticks">reset</button></span>
+  </div>
+</nav>
+
+<main>
+
+<section class="block" id="values">
+  <h2><span class="n">00</span>Your values</h2>
+  <p class="lead">Type your own names here first. Every command, name and example on this page updates to match. Nothing leaves your browser.</p>
+  <div class="card">
+    <div class="values">
+      <div><label>GitHub org (exact case)</label><input data-v="ORG" value="my-org"></div>
+      <div><label>Platform repo</label><input data-v="PLATFORM_REPO" value="databricks-platform"></div>
+      <div><label>Jobs repo</label><input data-v="JOBS_REPO" value="databricks-jobs"></div>
+      <div><label>Team name (lower-case)</label><input data-v="TEAM" value="cpps"></div>
+      <div><label>AWS account ID (int)</label><input data-v="AWS_ACCOUNT" value="111111111111"></div>
+      <div><label>AWS region</label><input data-v="REGION" value="us-east-1"></div>
+      <div><label>Databricks account ID</label><input data-v="DBX_ACCOUNT" value="00000000-0000-0000-0000-000000000000"></div>
+      <div><label>Name prefix</label><input data-v="PREFIX" value="dbx"></div>
+    </div>
+  </div>
+</section>
+
+<section class="block" id="map">
+  <h2><span class="n">01</span>The 14 steps</h2>
+  <p class="lead">Steps 1-5 are done by hand once. Steps 6-10 run by themselves in GitHub after you push the platform repo. Steps 11-14 set up the jobs repo and run the first job. Click a box to jump to it, or take the tour: it scrolls through every step and plays its animation.</p>
+  <div class="card">
+    <div class="journey" id="journey"></div>
+    <div class="tourbar">
+      <button class="btn primary" id="tourBtn">Take the tour</button>
+      <span class="muted" id="tourTxt" style="font-size:13px"></span>
+    </div>
+    <div class="muted" style="font-size:13px;margin-top:8px">Colour key:
+      <span class="pill c-laptop">your laptop</span> <span class="pill c-aws">AWS</span> <span class="pill c-dbx">Databricks account</span>
+      <span class="pill c-uc">Unity Catalog</span> <span class="pill c-ws">Databricks workspace</span> <span class="pill c-gh">GitHub</span>
+      <span class="pill c-ci">GitHub Actions</span> <span class="pill c-file">file in a repo</span> <span class="pill c-data">data</span>
+    </div>
+  </div>
+</section>
+
+<div id="steps"></div>
+
+<section class="block" id="team">
+  <h2><span class="n">T</span>Onboard another team</h2>
+  <p class="lead">Once the platform is running, a new team needs one file and one pull request. Example: team <code>fin</code> with its own jobs repo.</p>
+  <div id="teamSteps"></div>
+</section>
+
+<section class="block" id="qa">
+  <h2><span class="n">Q</span>Add qa later</h2>
+  <div class="card">
+    <ol>
+      <li><b>Bootstrap qa</b> (like step 2) with <code>bootstrap/qa.tfvars</code>. If qa uses the same AWS account as int, set <code>create_github_oidc_provider = false</code> and run <code>terraform workspace new qa</code> first.</li>
+      <li><b>Platform repo &gt; Settings &gt; Environments &gt; qa</b>: the same 3 variables (qa values) and 2 secrets as step 4. Add <b>Required reviewers</b> and limit it to the <code>main</code> branch.</li>
+      <li>Fill in <code>config/qa.yaml</code> (like step 5). Add <code>qa</code> to each ready team: <code>environments: [int, qa]</code>.</li>
+      <li><b>Actions &gt; platform-deploy &gt; Run workflow</b>: environment <code>qa</code>, stacks <code>all</code>. A reviewer approves the run. Steps 7-10 happen for qa.</li>
+      <li>Jobs repo: environment <code>qa</code> with the qa hand-off variables, then <b>Actions &gt; jobs-deploy &gt; Run workflow &gt; qa</b>.</li>
+    </ol>
+  </div>
+</section>
+
+<section class="block" id="teardown">
+  <h2><span class="n">X</span>Tear int down</h2>
+  <div class="card">
+    <p class="muted" style="margin-top:0">int is for testing, so its config allows deleting data. Do it in this order:</p>
+    <ol>
+      <li>Jobs repo: <b>Actions &gt; jobs-destroy</b>, environment <code>int</code>, type <code>int</code> to confirm. Removes the job and notebooks.</li>
+      <li>Platform repo: <b>Actions &gt; platform-destroy</b>, environment <code>int</code>, stacks <code>all</code>, type <code>int</code>. Removes step 9, then step 8, then step 7.</li>
+      <li>Optional: <code>terraform destroy -var-file=int.tfvars</code> in <code>bootstrap/</code>. The state bucket is protected; remove <code>prevent_destroy</code> first if you really want it gone.</li>
+    </ol>
+  </div>
+</section>
+
+<section class="block" id="reference">
+  <h2><span class="n">R</span>Parameters</h2>
+  <div class="grid2">
+    <div class="card">
+      <h3 style="margin-top:0">Platform repo: GitHub environment <code>int</code> / <code>qa</code></h3>
+      <table>
+        <tr><th>Name</th><th>Kind</th><th>Value</th></tr>
+        <tr><td><code>AWS_ROLE_ARN</code></td><td>variable</td><td>bootstrap <code>ci_role_arn</code></td></tr>
+        <tr><td><code>AWS_REGION</code></td><td>variable</td><td>region</td></tr>
+        <tr><td><code>TF_STATE_BUCKET</code></td><td>variable</td><td>bootstrap <code>state_bucket</code></td></tr>
+        <tr><td><code>DATABRICKS_CLIENT_ID</code></td><td>secret</td><td>CI service principal</td></tr>
+        <tr><td><code>DATABRICKS_CLIENT_SECRET</code></td><td>secret</td><td>CI service principal OAuth secret</td></tr>
+        <tr><td><code>PLAN_ENVIRONMENTS</code></td><td>repo variable</td><td>optional, default <code>["int"]</code></td></tr>
+      </table>
+    </div>
+    <div class="card">
+      <h3 style="margin-top:0">Jobs repo: GitHub environment <code>int</code> / <code>qa</code> (variables only)</h3>
+      <table>
+        <tr><th>Name</th><th>Value (hand-off)</th></tr>
+        <tr><td><code>TEAM</code></td><td>team name</td></tr>
+        <tr><td><code>DATABRICKS_HOST</code></td><td>workspace URL</td></tr>
+        <tr><td><code>AWS_REGION</code></td><td>region</td></tr>
+        <tr><td><code>AWS_ROLE_ARN</code></td><td><code>&lt;p&gt;-&lt;env&gt;-&lt;team&gt;-jobs-ci</code></td></tr>
+        <tr><td><code>TF_STATE_BUCKET</code></td><td>state bucket</td></tr>
+        <tr><td><code>DEPLOY_SECRET_ID</code></td><td><code>databricks/&lt;env&gt;/teams/&lt;team&gt;/deploy-sp</code></td></tr>
+        <tr><td><code>NAME_PREFIX</code></td><td><code>name_prefix</code></td></tr>
+      </table>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3 style="margin-top:0">Bootstrap: <code>bootstrap/&lt;env&gt;.tfvars</code></h3>
+    <table>
+      <tr><th>Variable</th><th>Default</th><th>Meaning</th></tr>
+      <tr><td><code>environment</code></td><td>(required)</td><td><code>int</code> or <code>qa</code></td></tr>
+      <tr><td><code>aws_region</code></td><td>(required)</td><td>region of the state bucket</td></tr>
+      <tr><td><code>github_org</code></td><td>(required)</td><td>owner of the platform repo, exact case</td></tr>
+      <tr><td><code>github_repo</code></td><td><code>databricks-platform</code></td><td>platform repo name</td></tr>
+      <tr><td><code>name_prefix</code></td><td><code>dbx</code></td><td>same as the config</td></tr>
+      <tr><td><code>create_github_oidc_provider</code></td><td><code>true</code></td><td><code>false</code> if the AWS account already has it</td></tr>
+    </table>
+  </div>
+
+  <div class="card">
+    <h3 style="margin-top:0"><code>config/&lt;env&gt;.yaml</code></h3>
+    <table>
+      <tr><th>Key</th><th>Default</th><th>Meaning</th></tr>
+      <tr><td><code>environment</code></td><td>(required)</td><td>equals the file name</td></tr>
+      <tr><td><code>name_prefix</code></td><td><code>dbx</code></td><td>prefix of AWS and account names</td></tr>
+      <tr><td><code>aws.account_id</code>, <code>aws.region</code></td><td>(required)</td><td>target account (checked against the credentials) and region</td></tr>
+      <tr><td><code>databricks.account_id</code></td><td>(required)</td><td>Databricks account ID</td></tr>
+      <tr><td><code>databricks.workspace_name</code></td><td><code>&lt;p&gt;-&lt;env&gt;</code></td><td></td></tr>
+      <tr><td><code>databricks.admins</code></td><td>(required)</td><td>e-mails for the platform admins group</td></tr>
+      <tr><td><code>databricks.create_users</code></td><td><code>false</code></td><td>create missing users (sandbox)</td></tr>
+      <tr><td><code>unity_catalog.metastore_id</code></td><td>region's metastore</td><td>use a specific metastore</td></tr>
+      <tr><td><code>unity_catalog.create_metastore</code></td><td><code>false</code></td><td>only if the region has none</td></tr>
+      <tr><td><code>unity_catalog.assign_metastore</code></td><td><code>true</code></td><td><code>false</code> if auto-assigned</td></tr>
+      <tr><td><code>unity_catalog.platform_catalog</code></td><td><code>true</code></td><td><code>&lt;env&gt;_platform</code></td></tr>
+      <tr><td><code>network.vpc_cidr</code>, <code>private_subnet_cidrs</code>, <code>public_subnet_cidrs</code></td><td>(required)</td><td>2+ private subnets, /17 to /26</td></tr>
+      <tr><td><code>network.availability_zones</code></td><td>first N</td><td></td></tr>
+      <tr><td><code>network.nat_gateway_count</code></td><td><code>1</code></td><td></td></tr>
+      <tr><td><code>network.interface_endpoints</code></td><td><code>false</code></td><td>STS + Kinesis</td></tr>
+      <tr><td><code>network.flow_logs</code></td><td><code>false</code></td><td>to S3, 90 days</td></tr>
+      <tr><td><code>network.privatelink.*</code></td><td>off</td><td><code>enabled</code>, <code>subnet_cidrs</code>, <code>public_access_enabled</code>, <code>workspace_service</code>, <code>relay_service</code>, <code>frontend</code></td></tr>
+      <tr><td><code>workspace.token_max_lifetime_days</code></td><td><code>90</code></td><td></td></tr>
+      <tr><td><code>workspace.ip_allow_list</code></td><td><code>[]</code></td><td>include CI's IPs</td></tr>
+      <tr><td><code>workspace.restrict_workspace_admins</code></td><td><code>true</code></td><td></td></tr>
+      <tr><td><code>workspace.disable_legacy_features</code></td><td><code>true</code></td><td></td></tr>
+      <tr><td><code>safety.allow_destroy_data</code></td><td><code>false</code></td><td><code>true</code> in int only</td></tr>
+      <tr><td><code>tags</code></td><td><code>{}</code></td><td></td></tr>
+    </table>
+  </div>
+
+  <div class="grid2">
+    <div class="card">
+      <h3 style="margin-top:0"><code>teams/&lt;team&gt;.yaml</code></h3>
+      <table>
+        <tr><th>Key</th><th>Default</th></tr>
+        <tr><td><code>name</code>, <code>environments</code>, <code>managers</code></td><td>(required)</td></tr>
+        <tr><td><code>description</code></td><td><code>""</code></td></tr>
+        <tr><td><code>members</code></td><td><code>[]</code></td></tr>
+        <tr><td><code>groups</code></td><td><code>{}</code> (<code>name: [emails]</code>)</td></tr>
+        <tr><td><code>service_principals</code></td><td><code>[]</code></td></tr>
+        <tr><td><code>job_repos</code></td><td><code>[]</code> (<code>org/repo</code>)</td></tr>
+        <tr><td><code>compute.node_types</code></td><td><code>[m5d.large, m5d.xlarge]</code></td></tr>
+        <tr><td><code>compute.max_workers</code></td><td><code>4</code></td></tr>
+        <tr><td><code>compute.allow_interactive</code></td><td><code>true</code></td></tr>
+        <tr><td><code>compute.autotermination_minutes</code></td><td><code>30</code></td></tr>
+        <tr><td><code>compute.max_clusters_per_user</code></td><td><code>2</code></td></tr>
+        <tr><td><code>sql_warehouse.enabled / size / auto_stop_minutes / max_clusters / serverless</code></td><td><code>true / 2X-Small / 10 / 1 / false</code></td></tr>
+        <tr><td><code>catalog.schemas</code></td><td><code>[raw, curated]</code></td></tr>
+        <tr><td><code>secret_scope</code></td><td><code>true</code></td></tr>
+        <tr><td><code>budget.monthly_usd / alert_emails</code></td><td><code>0</code> (off) / managers</td></tr>
+      </table>
+    </div>
+    <div class="card">
+      <h3 style="margin-top:0"><code>jobs/&lt;job&gt;/job.yaml</code></h3>
+      <table>
+        <tr><th>Key</th><th>Default</th></tr>
+        <tr><td><code>name</code>, <code>environments</code>, <code>cluster.node_type</code>, <code>tasks[].key</code>, <code>tasks[].notebook</code></td><td>(required)</td></tr>
+        <tr><td><code>description</code></td><td><code>""</code></td></tr>
+        <tr><td><code>max_concurrent_runs</code></td><td><code>1</code></td></tr>
+        <tr><td><code>timeout_minutes</code></td><td><code>60</code></td></tr>
+        <tr><td><code>schedule.cron / timezone / paused_in</code></td><td>none / <code>UTC</code> / <code>[]</code></td></tr>
+        <tr><td><code>cluster.driver_node_type</code></td><td><code>node_type</code></td></tr>
+        <tr><td><code>cluster.workers</code></td><td><code>1</code></td></tr>
+        <tr><td><code>cluster.spark_version</code></td><td>latest LTS</td></tr>
+        <tr><td><code>parameters</code></td><td><code>{}</code>; <code>{env}</code>, <code>{team}</code>, <code>{catalog}</code> replaced</td></tr>
+        <tr><td><code>tasks[].depends_on / parameters / max_retries</code></td><td><code>[] / {} / 0</code></td></tr>
+        <tr><td><code>notifications.on_failure / on_success / on_start</code></td><td><code>[]</code></td></tr>
+      </table>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3 style="margin-top:0">Workflows</h3>
+    <table>
+      <tr><th>Repo</th><th>Workflow</th><th>Trigger</th><th>Inputs</th></tr>
+      <tr><td>platform</td><td><code>platform-ci</code></td><td>pull request to main</td><td></td></tr>
+      <tr><td>platform</td><td><code>platform-deploy</code></td><td>push to main (int), manual</td><td><code>environment</code> int/qa, <code>stacks</code> all/1-infra/2-workspace/3-teams</td></tr>
+      <tr><td>platform</td><td><code>platform-destroy</code></td><td>manual</td><td><code>environment</code>, <code>stacks</code>, <code>confirm</code></td></tr>
+      <tr><td>jobs</td><td><code>jobs-ci</code></td><td>pull request to main</td><td></td></tr>
+      <tr><td>jobs</td><td><code>jobs-deploy</code></td><td>push to main (int), manual</td><td><code>environment</code></td></tr>
+      <tr><td>jobs</td><td><code>jobs-run</code></td><td>manual</td><td><code>environment</code>, <code>job</code>, <code>wait</code></td></tr>
+      <tr><td>jobs</td><td><code>jobs-destroy</code></td><td>manual</td><td><code>environment</code>, <code>confirm</code></td></tr>
+    </table>
+  </div>
+</section>
+
+<section class="block" id="trouble">
+  <h2><span class="n">!</span>Troubleshooting</h2>
+  <div class="card">
+    <table>
+      <tr><th style="width:34%">Message</th><th>What it means and the fix</th></tr>
+      <tr><td>The GitHub environment is missing: ...</td><td>A variable or secret is not set on the environment. Add it under Settings &gt; Environments (steps 4 and 11).</td></tr>
+      <tr><td>Not authorized to perform sts:AssumeRoleWithWebIdentity</td><td>AWS does not recognise the repo. The org/repo name or its upper/lower case differs from step 2 (platform) or from <code>job_repos</code> (jobs), or the environment is not called <code>int</code>.</td></tr>
+      <tr><td>AWS credentials are for account X, but config says Y</td><td>Safety stop: wrong <code>AWS_ROLE_ARN</code> or wrong <code>aws.account_id</code>.</td></tr>
+      <tr><td>has unknown keys / Team files have problems / Job files have problems</td><td>A misspelled key in a YAML file. The message names the file and the key.</td></tr>
+      <tr><td>Databricks 401 / invalid_client</td><td>Wrong or expired OAuth secret. Make a new one (step 3) and update the GitHub secret.</td></tr>
+      <tr><td>PERMISSION_DENIED ... CREATE CATALOG / STORAGE CREDENTIAL</td><td>The CI service principal is not a metastore admin (step 3, part 4).</td></tr>
+      <tr><td>Metastore assignment fails: workspace already assigned</td><td>Databricks attached the workspace by itself. Set <code>unity_catalog.assign_metastore: false</code> and re-run.</td></tr>
+      <tr><td>databricks_metastore not found</td><td>No metastore in the region: set <code>create_metastore: true</code> or <code>metastore_id</code>.</td></tr>
+      <tr><td>user ... not found</td><td>An e-mail in a file is not a user in the Databricks account. Add or sync the user, or <code>create_users: true</code> in a sandbox.</td></tr>
+      <tr><td>Storage credential / external location validation fails</td><td>AWS had not finished saving the new role. Re-run the workflow.</td></tr>
+      <tr><td>wait until the workspace answers: timed out</td><td>Re-run. If an IP allow list or PrivateLink without public access is on, GitHub's runners cannot reach the workspace.</td></tr>
+      <tr><td>Validation failed for node_type_id / num_workers</td><td>The job asks for a machine type or size the team's policy does not allow.</td></tr>
+      <tr><td>cluster policy &lt;team&gt;-job-policy not found</td><td>The team does not exist in this environment yet, or the <code>TEAM</code> variable is wrong.</td></tr>
+      <tr><td>secret ... scheduled for deletion (qa)</td><td><code>aws secretsmanager restore-secret --secret-id ...</code> or wait 7 days.</td></tr>
+      <tr><td>Budget creation fails</td><td>Set <code>budget.monthly_usd: 0</code>.</td></tr>
+    </table>
+  </div>
+</section>
+
+<section class="block" id="glossary">
+  <h2><span class="n">?</span>Glossary</h2>
+  <div class="card">
+    <dl class="gloss" id="gloss"></dl>
+  </div>
+</section>
+
+</main>
+
+<footer>databricks-automation: databricks-platform + databricks-jobs. Tested offline with mocked providers; step 7 is the first real run.</footer>
+
+<script>
+/* ---------- step data, part 1: setup (steps 1-5) ---------- */
+// res rows: [group, name, type, what it is (plain words), count]
+// inputs rows: [name, value, comes from]   outputs rows: [name, value, used in]
+const STEPS = [
+{
+  id: "s1", short: "Get ready", where: "laptop", kind: "manual", time: "about 30 min, once",
+  title: "Get the accounts and tools ready",
+  plain: "Before anything can be built you need three accounts (AWS for the servers and storage, Databricks for the data platform, GitHub for the code and the pipelines) and a few programs on your laptop. Nothing is created in this step; you only check that you have what the next steps need.",
+  who: "You", what: "Check accounts and install tools", sub: "nothing is created yet",
+  inputs: [
+    ["AWS account", "{{AWS_ACCOUNT}}", "your company's AWS team"],
+    ["Databricks account", "Premium or Enterprise, on AWS", "your Databricks contact"],
+    ["GitHub org", "{{ORG}}", "your GitHub admin"],
+  ],
+  outputs: [
+    ["AWS admin login on your laptop", "aws sts get-caller-identity works", "step 2"],
+    ["Databricks account admin login", "accounts.cloud.databricks.com", "step 3"],
+    ["Right to create repos in {{ORG}}", "", "steps 4 and 11"],
+  ],
+  res: [
+    ["laptop", "terraform", "program, version 1.10 or newer", "Reads the .tf files and creates cloud resources", 1],
+    ["laptop", "aws", "AWS CLI v2", "Lets Terraform and you talk to AWS", 1],
+    ["laptop", "git", "program", "Sends the repos to GitHub", 1],
+    ["laptop", "gh (optional)", "GitHub CLI", "Sets GitHub variables from the terminal", 1],
+    ["dbx", "Unity Catalog metastore", "one per region", "Databricks' list of all catalogs and tables. Most accounts already have one in {{REGION}}", 1],
+    ["dbx", "Users", "people in the Databricks account", "Everyone you will name in the files must already be a user (usually synced from your company login)", 1],
+  ],
+  how: [
+    "Ask for, or check you have: AWS admin access to account <code>{{AWS_ACCOUNT}}</code>, Databricks <b>account admin</b>, and permission to create repos in <code>{{ORG}}</code>.",
+    "Install the tools. On a Mac with Homebrew:",
+    { code: "brew install terraform awscli git gh" },
+    "Log in to AWS (for example with <code>aws configure sso</code> or your company's login tool) and check the account number:",
+    { code: "terraform version\naws sts get-caller-identity     # \"Account\" must be {{AWS_ACCOUNT}}" },
+    "Download this folder (<code>databricks-automation</code>) to your laptop.",
+  ],
+  check: ["<code>aws sts get-caller-identity</code> shows account <code>{{AWS_ACCOUNT}}</code>", "You can open accounts.cloud.databricks.com and see <b>User management</b>"],
+  watch: ["If your account has no Unity Catalog metastore in {{REGION}}, you will set <code>create_metastore: true</code> in step 5."],
+},
+{
+  id: "s2", short: "Bootstrap AWS", where: "laptop", kind: "tf", time: "about 2 min",
+  title: "Prepare AWS for the pipeline (bootstrap)",
+  plain: "The pipeline in GitHub needs two things in AWS before it can run: a place to keep Terraform's notes about what it created (the <b>state bucket</b>), and a way to log in to AWS without a stored password (GitHub <b>OIDC</b> plus a <b>role</b>). You create those once, from your laptop. The role can only create roles that carry a <b>permissions boundary</b>, so the pipeline can never give itself more power.",
+  who: "You, on your laptop", what: "terraform apply in bootstrap/", sub: "uses your AWS admin login",
+  inputs: [
+    ["environment", "int", "you"],
+    ["name_prefix", "{{PREFIX}}", "your values"],
+    ["aws_region", "{{REGION}}", "your values"],
+    ["github_org", "{{ORG}}", "your values"],
+    ["github_repo", "{{PLATFORM_REPO}}", "your values"],
+    ["create_github_oidc_provider", "true", "false if AWS already has it"],
+  ],
+  outputs: [
+    ["AWS_ROLE_ARN", "{{CI_ROLE}}", "step 4"],
+    ["AWS_REGION", "{{REGION}}", "step 4"],
+    ["TF_STATE_BUCKET", "{{STATE_BUCKET}}", "steps 4 and 11"],
+    ["bootstrap/terraform.tfstate", "local file", "keep it safe"],
+  ],
+  res: [
+    ["aws", "{{STATE_BUCKET}}", "S3 bucket", "Holds Terraform's state: the record of everything the pipeline creates", 1],
+    ["aws", "state bucket settings", "S3 ownership, public access block, versioning, encryption, lifecycle", "Private, encrypted, keeps old versions for 90 days", 5],
+    ["aws", "state bucket policy", "S3 bucket policy", "Refuses any request that is not HTTPS", 1],
+    ["aws", "token.actions.githubusercontent.com", "IAM OIDC identity provider", "Lets GitHub Actions prove who it is to AWS, so no AWS password is stored in GitHub", 1],
+    ["aws", "{{P}}-boundary", "IAM policy", "The most any role the pipeline creates may ever do", 1],
+    ["aws", "github-{{P}}-platform", "IAM role", "The role the platform workflows use. Only {{ORG}}/{{PLATFORM_REPO}}, environment int, may use it", 1],
+    ["aws", "github-{{P}}-platform-policy", "IAM inline policy", "What that role may do: network, buckets named {{P}}-*, roles with the boundary, team secrets", 1],
+    ["laptop", "bootstrap/terraform.tfstate", "local file", "Terraform's record of this step", 1, false],
+  ],
+  how: [
+    "Open a terminal in the bootstrap folder and write the settings file:",
+    { code: "cd databricks-automation/databricks-platform/bootstrap\ncat > int.tfvars <<'EOF'\nenvironment                 = \"int\"\nname_prefix                 = \"{{PREFIX}}\"\naws_region                  = \"{{REGION}}\"\ngithub_org                  = \"{{ORG}}\"\ngithub_repo                 = \"{{PLATFORM_REPO}}\"\ncreate_github_oidc_provider = true\nEOF" },
+    "Create the resources. Terraform shows a plan; type <b>yes</b> to go ahead:",
+    { code: "terraform init\nterraform apply -var-file=int.tfvars" },
+    "Print the three values for step 4 and keep them:",
+    { code: "terraform output github_environment_variables" },
+  ],
+  check: ["The last line says <b>Apply complete! Resources: 11 added</b> (10 without the OIDC provider)", "AWS console &gt; S3 shows <code>{{STATE_BUCKET}}</code>"],
+  watch: ["Error <b>EntityAlreadyExists</b> for the OIDC provider: the account already has one. Set <code>create_github_oidc_provider = false</code> and run again.", "Do not delete <code>terraform.tfstate</code> in this folder (it is not pushed to GitHub)."],
+},
+{
+  id: "s3", short: "Databricks robot", where: "dbx", kind: "manual", time: "about 5 min",
+  title: "Create the pipeline's Databricks login (CI service principal)",
+  plain: "A <b>service principal</b> is a robot user. The pipeline logs in to Databricks as this robot to create the workspace, groups and catalogs. It needs to be an <b>account admin</b>, and its password is an <b>OAuth secret</b> that you store in GitHub in step 4.",
+  who: "You, in the browser", what: "Databricks account console", sub: "accounts.cloud.databricks.com",
+  inputs: [
+    ["Databricks account admin login", "you", "step 1"],
+  ],
+  outputs: [
+    ["DATABRICKS_CLIENT_ID", "the robot's Client ID (a UUID)", "step 4"],
+    ["DATABRICKS_CLIENT_SECRET", "shown once, copy it now", "step 4"],
+    ["Databricks account ID", "{{DBX_ACCOUNT}}", "step 5"],
+  ],
+  res: [
+    ["dbx", "databricks-platform-ci", "service principal", "The robot user the pipeline logs in as", 1],
+    ["dbx", "Account admin", "role on the service principal", "Lets it create workspaces, groups and service principals", 1],
+    ["dbx", "OAuth secret", "service principal secret", "The robot's password (client ID + secret)", 1],
+    ["uc", "Metastore admin", "metastore setting", "Lets it create catalogs and storage credentials (needed if the metastore already exists)", 1],
+  ],
+  how: [
+    "Open <a href=\"https://accounts.cloud.databricks.com\" target=\"_blank\" rel=\"noopener\">accounts.cloud.databricks.com</a> and log in.",
+    "Go to <b>User management</b> &gt; <b>Service principals</b> &gt; <b>Add service principal</b>. Name: <code>databricks-platform-ci</code>. Click <b>Add</b>.",
+    "Open the new service principal &gt; <b>Roles</b> tab &gt; switch on <b>Account admin</b>.",
+    "<b>Credentials &amp; secrets</b> tab &gt; <b>OAuth secrets</b> &gt; <b>Generate secret</b>. Copy the <b>Client ID</b> and the <b>Secret</b> somewhere safe. The secret is shown only once.",
+    "Go to <b>Catalog</b> &gt; click the metastore for {{REGION}} &gt; <b>Metastore admin</b> &gt; <b>Edit</b> &gt; choose a group that contains <code>databricks-platform-ci</code> (or the service principal itself).",
+    "Click your name (top right) and copy the <b>Account ID</b> into <a href=\"#values\">your values</a>.",
+  ],
+  check: ["The service principal shows the <b>Account admin</b> role", "You have the Client ID, the secret and the account ID written down"],
+  watch: ["Treat the secret like a password: do not paste it into a file in the repo."],
+},
+{
+  id: "s4", short: "Platform repo", where: "gh", kind: "manual", time: "about 5 min",
+  title: "Create the platform repo in GitHub and give it the logins",
+  plain: "GitHub keeps per-environment settings in an <b>environment</b>. You create one called <code>int</code> and store the AWS role, the state bucket and the Databricks robot login in it. Every workflow job that says <code>environment: int</code> can then use them.",
+  who: "You, in GitHub", what: "Settings > Environments > int", sub: "or the gh commands below",
+  inputs: [
+    ["AWS_ROLE_ARN", "{{CI_ROLE}}", "step 2"],
+    ["AWS_REGION", "{{REGION}}", "step 2"],
+    ["TF_STATE_BUCKET", "{{STATE_BUCKET}}", "step 2"],
+    ["DATABRICKS_CLIENT_ID", "client ID", "step 3"],
+    ["DATABRICKS_CLIENT_SECRET", "secret", "step 3"],
+  ],
+  outputs: [
+    ["Repo {{ORG}}/{{PLATFORM_REPO}}", "empty, ready for the push", "step 6"],
+    ["Environment int", "3 variables + 2 secrets", "steps 6-10"],
+  ],
+  res: [
+    ["gh", "{{ORG}}/{{PLATFORM_REPO}}", "repository (empty)", "Where the platform code will live", 1],
+    ["gh", "int", "environment", "Settings that only workflow jobs running for int can read", 1],
+    ["gh", "AWS_ROLE_ARN, AWS_REGION, TF_STATE_BUCKET", "environment variables", "Where to log in to AWS and where to keep state", 3],
+    ["gh", "DATABRICKS_CLIENT_ID, DATABRICKS_CLIENT_SECRET", "environment secrets", "The Databricks robot login (hidden in logs)", 2],
+  ],
+  how: [
+    "In GitHub: <b>+</b> &gt; <b>New repository</b> &gt; owner <code>{{ORG}}</code>, name <code>{{PLATFORM_REPO}}</code>, <b>Private</b>. Do <b>not</b> add a README. Click <b>Create repository</b>.",
+    "<b>Settings</b> &gt; <b>Environments</b> &gt; <b>New environment</b> &gt; name <code>int</code> &gt; <b>Configure environment</b>. Leave <b>Deployment branches</b> on <b>No restriction</b> (pull requests also use int to show a plan).",
+    "Under <b>Environment variables</b> click <b>Add variable</b> three times: <code>AWS_ROLE_ARN</code>, <code>AWS_REGION</code>, <code>TF_STATE_BUCKET</code> with the values from step 2.",
+    "Under <b>Environment secrets</b> click <b>Add secret</b> twice: <code>DATABRICKS_CLIENT_ID</code> and <code>DATABRICKS_CLIENT_SECRET</code> from step 3.",
+    "Or do all of it from the terminal (the two <code>secret set</code> lines ask you to paste the value):",
+    { code: "REPO={{ORG}}/{{PLATFORM_REPO}}\ngh repo create $REPO --private\ngh api --method PUT repos/$REPO/environments/int\ngh variable set AWS_ROLE_ARN    --repo $REPO --env int --body '{{CI_ROLE}}'\ngh variable set AWS_REGION      --repo $REPO --env int --body '{{REGION}}'\ngh variable set TF_STATE_BUCKET --repo $REPO --env int --body '{{STATE_BUCKET}}'\ngh secret set DATABRICKS_CLIENT_ID     --repo $REPO --env int\ngh secret set DATABRICKS_CLIENT_SECRET --repo $REPO --env int" },
+  ],
+  check: ["Settings &gt; Environments &gt; int lists 3 variables and 2 secrets"],
+  watch: ["Names are case-sensitive: <code>AWS_ROLE_ARN</code>, not <code>aws_role_arn</code>.", "The repo name must match <code>github_repo</code> from step 2 exactly, or AWS will refuse the login."],
+},
+{
+  id: "s5", short: "Settings files", where: "file", kind: "manual", time: "about 10 min",
+  title: "Fill in the platform settings and the first team",
+  plain: "Two YAML files describe what to build. <code>config/int.yaml</code> says which AWS and Databricks account to use and how the network looks. <code>teams/{{TEAM}}.yaml</code> describes one team: who is in it, which machines it may use, and which GitHub repo may deploy its jobs. Nothing is created yet; the pipeline reads these files in steps 7-9.",
+  who: "You, in an editor", what: "Edit 3 files", sub: "replace every CHANGE ME",
+  inputs: [
+    ["AWS account ID", "{{AWS_ACCOUNT}}", "step 1"],
+    ["Region", "{{REGION}}", "your values"],
+    ["Databricks account ID", "{{DBX_ACCOUNT}}", "step 3"],
+    ["Admin e-mails", "people who run the platform", "you"],
+    ["Team e-mails", "managers, members, groups", "the team lead"],
+    ["Jobs repo", "{{ORG}}/{{JOBS_REPO}}", "your values"],
+  ],
+  outputs: [
+    ["config/int.yaml", "platform settings", "steps 7 and 8"],
+    ["teams/{{TEAM}}.yaml", "the team", "step 9"],
+    [".github/CODEOWNERS", "who must approve changes", "step 14"],
+  ],
+  res: [
+    ["file", "config/int.yaml", "platform settings", "AWS account, region, Databricks account, admins, network ranges, safety switches", 1],
+    ["file", "teams/{{TEAM}}.yaml", "team file", "Managers, members, extra groups, robots, allowed machines, warehouse size, budget, jobs repo", 1],
+    ["file", ".github/CODEOWNERS", "approvers", "The GitHub team that must approve every change", 1],
+  ],
+  how: [
+    "Open <code>databricks-platform/config/int.yaml</code> and change these lines (leave the rest as it is for the first run):",
+    { code: "environment: int\nname_prefix: {{PREFIX}}\naws:\n  account_id: \"{{AWS_ACCOUNT}}\"     # keep the quotes\n  region: {{REGION}}\ndatabricks:\n  account_id: \"{{DBX_ACCOUNT}}\"\n  admins:\n    - you@example.com            # people who run the platform" },
+    "If your team is not called cpps, rename the example: <code>git mv teams/cpps.yaml teams/{{TEAM}}.yaml</code> (or just <code>mv</code>, the folder is not a git repo yet). Then edit it:",
+    { code: "name: {{TEAM}}                     # must equal the file name\nenvironments: [int]\nmanagers:\n  - lead@example.com\nmembers:\n  - engineer@example.com\ngroups:\n  analysts:\n    - analyst@example.com\njob_repos:\n  - {{ORG}}/{{JOBS_REPO}}         # exact org/repo of the jobs repo\ncompute:\n  node_types: [m5d.large, m5d.xlarge, m5d.2xlarge]\n  max_workers: 4" },
+    "In <code>.github/CODEOWNERS</code> replace <code>@my-org/databricks-platform-admins</code> with your GitHub team.",
+  ],
+  check: ["No <code>CHANGE ME</code> left: <code>grep -rn \"CHANGE ME\" config teams</code> prints nothing", "Every e-mail is a user in the Databricks account"],
+  watch: ["A misspelled key (for example <code>nat_gatway_count</code>) stops the pipeline with a message naming the key. That is on purpose."],
+},
+];
+
+/* ---------- step data, part 2: platform pipeline (6-10) and job pipeline (11-14) ---------- */
+STEPS.push(
+{
+  id: "s6", short: "Push platform repo", where: "ci", kind: "git", time: "1 min, then the pipeline runs about 30-45 min",
+  title: "Push the platform repo: the pipeline starts by itself",
+  plain: "Pushing the code to the <code>main</code> branch starts the <b>platform-deploy</b> workflow in GitHub Actions. From here on you only watch: steps 7, 8 and 9 are three parts of this one run, applied in order because each needs what the one before created.",
+  who: "You, in the terminal", what: "git push to main", sub: "starts Actions > platform-deploy",
+  inputs: [
+    ["The databricks-platform folder", "with your edits from step 5", "step 5"],
+    ["Environment int", "logins", "step 4"],
+  ],
+  outputs: [
+    ["Workflow run", "Actions > platform-deploy (int)", "steps 7-10"],
+  ],
+  res: [
+    ["gh", "main", "branch with your first commit", "The code the pipeline runs", 1],
+    ["ci", "platform-deploy", "workflow run", "One job, environment int, with the steps below", 1],
+    ["ci", "Check GitHub environment settings", "workflow step", "Stops early with a clear message if a variable or secret is missing", 1],
+    ["ci", "AWS credentials (OIDC)", "workflow step", "Logs in to AWS as github-{{P}}-platform, no password", 1],
+    ["ci", "apply 1-infra", "workflow step", "Step 7", 1],
+    ["ci", "wait until the workspace answers", "workflow step", "New workspaces need a few minutes before they accept requests", 1],
+    ["ci", "apply 2-workspace", "workflow step", "Step 8", 1],
+    ["ci", "apply 3-teams", "workflow step", "Step 9", 1],
+    ["ci", "Summary + job repo hand-off", "workflow step", "Step 10", 1],
+  ],
+  log: ["$ git push -u origin main", "To github.com:{{ORG}}/{{PLATFORM_REPO}}.git  * [new branch] main -> main", "GitHub Actions: platform-deploy #1 queued (push to main, environment int)"],
+  how: [
+    "Turn the folder into a git repo and push it:",
+    { code: "cd databricks-automation/databricks-platform\ngit init -b main\ngit add .\ngit commit -m \"Databricks platform: int\"\ngit remote add origin git@github.com:{{ORG}}/{{PLATFORM_REPO}}.git\ngit push -u origin main" },
+    "Open the repo in GitHub &gt; <b>Actions</b> &gt; <b>platform-deploy</b> &gt; the running job. Each step expands to show its log.",
+  ],
+  check: ["The run appears under Actions within a few seconds"],
+  watch: ["If the run fails at <b>Check GitHub environment settings</b>, a name in step 4 is missing or misspelled. Fix it and use <b>Re-run jobs</b>."],
+},
+{
+  id: "s7", short: "1-infra: network + workspace", where: "ci", kind: "tf", time: "10-20 min",
+  title: "Pipeline part 1 (1-infra): network, workspace and admins",
+  plain: "Terraform builds a private network in AWS for the Databricks machines, a role that lets Databricks start machines only in that network, a bucket for the workspace's own files, and then the Databricks <b>workspace</b> itself. It connects the workspace to Unity Catalog (the <b>metastore</b>) and creates a group of platform admins.",
+  who: "GitHub Actions", what: "scripts/tf.sh apply int 1-infra", sub: "Terraform, as github-{{P}}-platform + databricks-platform-ci",
+  inputs: [
+    ["config/int.yaml", "accounts, network ranges", "step 5"],
+    ["AWS login", "{{CI_ROLE}}", "step 4"],
+    ["Databricks login", "DATABRICKS_CLIENT_ID / SECRET", "step 4"],
+    ["State", "s3://{{STATE_BUCKET}}/platform/int/1-infra.tfstate", "step 2"],
+  ],
+  outputs: [
+    ["workspace_url", "https://dbc-....cloud.databricks.com", "steps 8, 9, 10"],
+    ["workspace_id", "a number", "step 9"],
+    ["metastore_id", "the region's metastore", "step 10"],
+    ["admins_group", "{{P}}-platform-admins", "steps 8, 9"],
+    ["nat_public_ips", "clusters' outgoing IP", "your firewalls"],
+  ],
+  res: [
+    ["aws", "{{P}}", "VPC 10.20.0.0/16", "A private network in your AWS account", 1],
+    ["aws", "{{P}}-igw", "internet gateway", "The network's door to the internet", 1],
+    ["aws", "{{P}}-public-0, -1", "public subnets", "Where the NAT gateway sits", 2],
+    ["aws", "{{P}}-nat-0", "Elastic IP + NAT gateway", "Lets machines reach the internet without being reachable from it", 2],
+    ["aws", "public route table + route + 2 links", "routing", "Sends public subnet traffic to the internet gateway", 4],
+    ["aws", "{{P}}-compute-0, -1", "private subnets (2 zones)", "Where Databricks starts its machines", 2],
+    ["aws", "compute route tables + routes + links", "routing", "Sends machine traffic out through the NAT", 6],
+    ["aws", "{{P}}-workspace", "security group + 7 rules", "Firewall: machines talk to each other and to Databricks on 443, 2443, 3306, 6666, 8443-8451", 8],
+    ["aws", "{{P}}-s3", "S3 gateway endpoint", "Free shortcut to S3 that avoids the NAT", 1],
+    ["aws", "{{P}}-crossaccount", "IAM role + policy", "Lets Databricks start and stop EC2 machines, only in this VPC and security group", 2],
+    ["aws", "IAM wait", "time_sleep 30s", "Gives AWS time to save the role before Databricks checks it", 1],
+    ["dbx", "{{P}}-credentials", "Databricks credentials", "Tells Databricks which role to use", 1],
+    ["aws", "{{P}}-{{AWS_ACCOUNT}}-root", "S3 bucket + 4 settings", "The workspace's own system files; private, encrypted, Databricks-only policy", 5],
+    ["dbx", "{{P}}-root", "storage configuration", "Tells Databricks which bucket to use", 1],
+    ["dbx", "{{P}}-network", "network configuration", "Tells Databricks which VPC, subnets and security group to use", 1],
+    ["dbx", "{{P}}", "workspace", "The Databricks workspace itself (its web address is the workspace URL)", 1],
+    ["uc", "metastore assignment", "workspace -> metastore", "Connects the workspace to Unity Catalog", 1],
+    ["dbx", "{{P}}-platform-admins", "account group", "Platform admins (the e-mails in config) plus the CI robot", 1],
+    ["dbx", "admins group members", "group memberships", "Your admins and databricks-platform-ci join the group", 2],
+    ["dbx", "admins -> workspace", "workspace assignment ADMIN", "The group administers the workspace", 1],
+    ["ci", "safety checks", "terraform_data", "Stops the run if the AWS account or a YAML key is wrong", 2],
+  ],
+  how: [
+    "Nothing to do: watch <b>apply 1-infra</b> in the run. The longest wait is <code>databricks_mws_workspaces.this: Still creating...</code> (about 5-10 minutes).",
+    "Run it again by hand any time: <b>Actions</b> &gt; <b>platform-deploy</b> &gt; <b>Run workflow</b> &gt; environment <code>int</code>, stacks <code>1-infra</code>.",
+  ],
+  check: ["The step ends with <b>Apply complete! Resources: 46 added</b> (1 more per extra admin)", "Databricks account console &gt; <b>Workspaces</b> shows <code>{{P}}</code> as <b>Running</b>"],
+  watch: ["<b>workspace already assigned to a metastore</b>: set <code>unity_catalog.assign_metastore: false</code> in config/int.yaml, push, and the run continues.", "<b>user ... not found</b>: an admin e-mail is not a Databricks user yet."],
+},
+{
+  id: "s8", short: "2-workspace: settings", where: "ci", kind: "tf", time: "2-5 min",
+  title: "Pipeline part 2 (2-workspace): safe settings and the shared catalog",
+  plain: "Terraform logs in to the new workspace and switches on safe defaults: short-lived personal tokens, no old-style (legacy) storage, admins cannot run jobs as other people. It creates the <code>/Teams</code> folder and a shared catalog <code>int_platform</code> for reference data everyone may read. A <b>catalog</b> is a top-level folder for tables; it stores its data in its own S3 bucket.",
+  who: "GitHub Actions", what: "scripts/tf.sh apply int 2-workspace", sub: "Terraform, inside the workspace",
+  inputs: [
+    ["workspace_url, admins_group", "from 1-infra's state", "step 7"],
+    ["config/int.yaml workspace.*", "token lifetime 90 days, legacy off", "step 5"],
+  ],
+  outputs: [
+    ["teams_folder", "/Teams", "step 9"],
+    ["platform_catalog", "int_platform", "everyone"],
+  ],
+  res: [
+    ["ws", "workspace settings", "workspace conf", "Personal access tokens live at most 90 days", 1],
+    ["ws", "restrict workspace admins", "setting", "Admins cannot create tokens for, or run jobs as, other people", 1],
+    ["ws", "legacy access off", "setting", "No Hive metastore, DBFS mounts or no-isolation clusters", 1],
+    ["ws", "legacy DBFS off", "setting", "No browsing of the old DBFS root", 1],
+    ["ws", "users", "entitlements", "Everyone can log in and use SQL, but cannot start clusters freely", 1],
+    ["ws", "/Teams", "folder + permissions", "Parent folder for every team; admins only", 2],
+    ["aws", "{{P}}-platform-{{AWS_ACCOUNT}}", "S3 bucket + 5 settings", "Where int_platform's tables are stored", 6],
+    ["uc", "{{P}}-platform-credential", "storage credential", "Unity Catalog's key to that bucket", 1],
+    ["aws", "{{P}}-platform-uc", "IAM role + policy", "The role behind the key: this bucket only", 2],
+    ["aws", "IAM wait", "time_sleep 30s", "Lets AWS save the role before Databricks tests it", 1],
+    ["uc", "{{P}}-platform-location", "external location + grants", "Registers the bucket in Unity Catalog", 2],
+    ["uc", "int_platform", "catalog (this workspace only)", "Shared reference data", 1],
+    ["uc", "int_platform.shared", "schema", "Where shared tables go", 1],
+    ["uc", "int_platform grants", "grants", "Admins: everything. All users: browse and read", 1],
+    ["ci", "settings check", "terraform_data", "Stops the run if a YAML key is misspelled", 1],
+  ],
+  how: [
+    "Nothing to do: watch <b>wait until the workspace answers</b> and then <b>apply 2-workspace</b>.",
+  ],
+  check: ["Ends with <b>Apply complete! Resources: 23 added</b> (22 plus the settings check)", "In the workspace: <b>Catalog</b> shows <code>int_platform</code>"],
+  watch: ["<b>PERMISSION_DENIED ... CREATE STORAGE CREDENTIAL</b>: databricks-platform-ci is not metastore admin (step 3)."],
+},
+{
+  id: "s9", short: "3-teams: the team", where: "ci", kind: "tf", time: "3-6 min",
+  title: "Pipeline part 3 (3-teams): everything team {{TEAM}} needs",
+  plain: "For every file in <code>teams/</code> that lists int, Terraform creates the team: its groups, two <b>robot users</b> (service principals; the jobs will run as <code>{{PT}}-deploy</code>), its own catalog <code>{{CAT}}</code> with its own bucket, <b>cluster policies</b> that limit machine types and sizes, a SQL warehouse, a secret store, a folder, a budget alert, and an AWS role that only the team's jobs repo can use.",
+  who: "GitHub Actions", what: "scripts/tf.sh apply int 3-teams", sub: "one module call per team file",
+  inputs: [
+    ["teams/{{TEAM}}.yaml", "people, limits, jobs repo", "step 5"],
+    ["workspace_url, workspace_id", "from 1-infra", "step 7"],
+    ["teams_folder", "/Teams", "step 8"],
+    ["TF_STATE_BUCKET", "{{STATE_BUCKET}}", "step 4"],
+  ],
+  outputs: [
+    ["team_handoff.{{TEAM}}", "7 variables for the jobs repo", "steps 10, 11"],
+    ["teams.{{TEAM}}", "catalog, groups, robots, policy, folder", "step 10"],
+  ],
+  res: [
+    ["dbx", "{{PT}}-users", "account group", "Everyone in the team", 1],
+    ["dbx", "{{PT}}-managers", "account group", "Team leads", 1],
+    ["dbx", "{{PT}}-analysts", "account group", "Extra group from the file (groups: analysts)", 1],
+    ["dbx", "group members", "memberships", "The people from the file go into their groups", 5],
+    ["dbx", "{{PT}}-deploy", "service principal", "Robot the jobs repo deploys as; the jobs run as it", 1],
+    ["dbx", "{{PT}}-reporting", "service principal", "Extra robot from the file (read only)", 1],
+    ["dbx", "robots -> users group", "memberships", "Both robots are team members", 2],
+    ["dbx", "managers may use deploy robot", "access rule", "Managers can run jobs as the robot", 1],
+    ["dbx", "90-day timer + OAuth secret", "secret rotation + service principal secret", "The deploy robot's password, renewed every 90 days", 2],
+    ["dbx", "team -> workspace", "workspace assignments", "3 groups and 2 robots can log in to {{P}}", 5],
+    ["dbx", "{{PT}}", "budget", "E-mail to managers when the team's monthly spend passes $500", 1],
+    ["aws", "databricks/int/teams/{{TEAM}}/deploy-sp", "Secrets Manager secret + value", "Safe holding the deploy robot's login for the jobs repo", 2],
+    ["aws", "{{PT}}-jobs-ci", "IAM role + policy", "Login for {{ORG}}/{{JOBS_REPO}} (environment int): its own state folder and its own secret only", 2],
+    ["aws", "{{PT}}-{{AWS_ACCOUNT}}", "S3 bucket + 5 settings", "Where the team's tables are stored", 6],
+    ["uc", "{{PT}}-credential", "storage credential", "Unity Catalog's key to the team bucket", 1],
+    ["aws", "{{PT}}-uc", "IAM role + policy + 30s wait", "The role behind the key: the team bucket only", 3],
+    ["uc", "{{PT}}-location", "external location + grants", "Registers the team bucket", 2],
+    ["uc", "{{CAT}}", "catalog (this workspace only)", "The team's tables live here", 1],
+    ["uc", "{{CAT}}.raw, {{CAT}}.curated", "schemas", "Raw data in, cleaned data out", 2],
+    ["uc", "{{CAT}} grants", "grants", "Managers: everything. Members: read. Deploy robot: create and write tables", 1],
+    ["ws", "{{TEAM}}-job-policy", "cluster policy + permissions", "Jobs may use m5d.large to 2xlarge, at most 4 workers; tagged team={{TEAM}}", 2],
+    ["ws", "{{TEAM}}-interactive-policy", "cluster policy + permissions", "Notebook clusters for members, stop after 30 idle minutes", 2],
+    ["ws", "{{TEAM}}-warehouse", "SQL warehouse + permissions", "2X-Small, stops after 10 idle minutes", 2],
+    ["ws", "team entitlements", "entitlements", "Team and robots can log in and use SQL", 3],
+    ["ws", "/Teams/{{TEAM}}", "folder + permissions", "Team code goes here; managers and the deploy robot manage it", 2],
+    ["ws", "{{TEAM}}", "secret scope + 3 rules", "Passwords for source systems; managers manage, robots read", 4],
+    ["ci", "settings check", "terraform_data", "Stops the run if a team file has a misspelled key", 1],
+  ],
+  how: [
+    "Nothing to do: watch <b>apply 3-teams</b>. It changes only teams whose file changed.",
+  ],
+  check: ["Ends with <b>Apply complete! Resources: 57 added</b> the first time (56 for the team plus the settings check)"],
+  watch: ["<b>user ... not found</b>: an e-mail in teams/{{TEAM}}.yaml is not a Databricks user.", "<b>Budget creation fails</b>: set <code>budget.monthly_usd: 0</code>."],
+},
+{
+  id: "s10", short: "Hand-off + check", where: "ci", kind: "manual", time: "5 min",
+  title: "Read the hand-off and look at what was built",
+  plain: "The last step of the run writes a summary page: the workspace address and, for each team, the 7 values its jobs repo needs. These are not passwords; the jobs repo uses them to find its AWS role and the safe that holds the robot's login. Then open the workspace and see the result.",
+  who: "You, in the browser", what: "Run summary + workspace", sub: "Actions > the run > Summary",
+  inputs: [
+    ["The finished run", "platform-deploy #1", "step 6"],
+  ],
+  outputs: [
+    ["TEAM", "{{TEAM}}", "step 11"],
+    ["DATABRICKS_HOST", "workspace URL", "step 11"],
+    ["AWS_REGION", "{{REGION}}", "step 11"],
+    ["AWS_ROLE_ARN", "{{JOBS_ROLE}}", "step 11"],
+    ["TF_STATE_BUCKET", "{{STATE_BUCKET}}", "step 11"],
+    ["DEPLOY_SECRET_ID", "{{SECRET_ID}}", "step 11"],
+    ["NAME_PREFIX", "{{PREFIX}}", "step 11"],
+  ],
+  res: [
+    ["ci", "Run summary", "page in GitHub", "Workspace URL, IDs, outgoing IPs and the hand-off table with gh commands", 1],
+    ["uc", "int_platform, {{CAT}}", "catalogs (check)", "Workspace > Catalog", 2],
+    ["ws", "{{TEAM}}-job-policy, {{TEAM}}-interactive-policy", "policies (check)", "Workspace > Compute > Policies", 2],
+    ["ws", "{{TEAM}}-warehouse", "SQL warehouse (check)", "Workspace > SQL Warehouses (stopped until used)", 1],
+    ["ws", "/Teams/{{TEAM}}", "folder (check)", "Workspace > Workspace > Teams", 1],
+    ["dbx", "{{PT}}-users, -managers, -deploy", "groups and robot (check)", "Account console > User management", 3],
+  ],
+  log: ["Opened: Actions > platform-deploy > Summary", "Copied: Job repo hand-off (7 variables)", "Opened the workspace URL and checked catalogs, policies, warehouse, folder"],
+  how: [
+    "GitHub &gt; <b>Actions</b> &gt; the finished <b>platform-deploy</b> run &gt; <b>Summary</b>. Scroll to <b>Job repo hand-off</b>.",
+    "Copy the 7 values (or the ready-made <code>gh</code> commands under them).",
+    "Click the workspace link in the summary and log in with your company account.",
+    "Look at <b>Catalog</b>, <b>Compute &gt; Policies</b>, <b>SQL Warehouses</b> and <b>Workspace &gt; Teams</b>.",
+  ],
+  check: ["You see <code>int_platform</code> and <code>{{CAT}}</code> under Catalog", "You have the 7 hand-off values"],
+  watch: ["You only see the team catalog if you are an admin or in the team."],
+},
+{
+  id: "s11", short: "Jobs repo", where: "gh", kind: "manual", time: "5 min",
+  title: "Create the jobs repo and give it the hand-off values",
+  plain: "The jobs repo is where the team keeps its jobs. It gets its own <code>int</code> environment with the 7 hand-off values as plain <b>variables</b>. It needs no secrets: when a workflow runs, it logs in to AWS with the team's role and reads the robot's login from the safe.",
+  who: "You or the team, in GitHub", what: "New repo + environment int", sub: "7 variables, no secrets",
+  inputs: [
+    ["Hand-off values", "7 variables", "step 10"],
+    ["Repo name", "{{ORG}}/{{JOBS_REPO}} (must match job_repos)", "step 5"],
+  ],
+  outputs: [
+    ["Repo {{ORG}}/{{JOBS_REPO}}", "empty", "step 12"],
+    ["Environment int", "7 variables", "steps 12, 13"],
+  ],
+  res: [
+    ["gh", "{{ORG}}/{{JOBS_REPO}}", "repository (empty)", "Where the team's jobs live", 1],
+    ["gh", "int", "environment", "Settings for jobs runs in int", 1],
+    ["gh", "TEAM, DATABRICKS_HOST, AWS_REGION, AWS_ROLE_ARN, TF_STATE_BUCKET, DEPLOY_SECRET_ID, NAME_PREFIX", "environment variables", "Where to log in, where to keep state, which team", 7],
+  ],
+  how: [
+    "Create a new <b>empty</b> repo <code>{{ORG}}/{{JOBS_REPO}}</code> (same name as <code>job_repos</code> in the team file).",
+    "<b>Settings</b> &gt; <b>Environments</b> &gt; <b>New environment</b> &gt; <code>int</code> (no branch restriction).",
+    "Add the 7 <b>variables</b>. With the GitHub CLI (copy the workspace URL from the summary):",
+    { code: "REPO={{ORG}}/{{JOBS_REPO}}\ngh repo create $REPO --private\ngh api --method PUT repos/$REPO/environments/int\ngh variable set TEAM             --repo $REPO --env int --body '{{TEAM}}'\ngh variable set DATABRICKS_HOST  --repo $REPO --env int --body 'https://dbc-xxxx.cloud.databricks.com'\ngh variable set AWS_REGION       --repo $REPO --env int --body '{{REGION}}'\ngh variable set AWS_ROLE_ARN     --repo $REPO --env int --body '{{JOBS_ROLE}}'\ngh variable set TF_STATE_BUCKET  --repo $REPO --env int --body '{{STATE_BUCKET}}'\ngh variable set DEPLOY_SECRET_ID --repo $REPO --env int --body '{{SECRET_ID}}'\ngh variable set NAME_PREFIX      --repo $REPO --env int --body '{{PREFIX}}'" },
+  ],
+  check: ["Settings &gt; Environments &gt; int lists 7 variables"],
+  watch: ["If the repo name differs from <code>job_repos</code>, AWS refuses the login in step 12. Fix the team file (step 5) and let the platform run again."],
+},
+{
+  id: "s12", short: "Push jobs repo: job created", where: "ci", kind: "tf", time: "2-3 min",
+  title: "Push the jobs repo: the job pipeline creates the job",
+  plain: "Pushing to <code>main</code> starts <b>jobs-deploy</b>. It logs in to AWS as the team's role, takes the robot's login from the safe, and runs Terraform as the robot <code>{{PT}}-deploy</code>. Terraform uploads the notebooks and creates the Databricks <b>job</b>: two tasks (ingest, then transform) on one small machine, under the team's cluster policy, writing to <code>{{CAT}}</code>.",
+  who: "GitHub Actions", what: "scripts/tf.sh apply int", sub: "Terraform, as {{PT}}-deploy",
+  inputs: [
+    ["jobs/sample-etl/job.yaml", "schedule, machine, tasks", "the repo"],
+    ["jobs/sample-etl/src/*.py", "ingest.py, transform.py", "the repo"],
+    ["Environment int", "7 variables", "step 11"],
+    ["AWS login", "{{JOBS_ROLE}}", "step 9"],
+    ["Robot login", "from {{SECRET_ID}}", "step 9"],
+  ],
+  outputs: [
+    ["Job {{TEAM}}-sample-etl", "job ID + link", "step 13"],
+    ["deployed_as", "{{PT}}-deploy (its application ID)", "run summary"],
+    ["catalog", "{{CAT}}", "run summary"],
+    ["State", "s3://{{STATE_BUCKET}}/jobs/int/{{TEAM}}/{{JOBS_REPO}}.tfstate", "next deploys"],
+  ],
+  res: [
+    ["ci", "checks", "terraform_data", "Stops on a misspelled key, a missing notebook or a bad task order", 1],
+    ["ws", "/Teams/{{TEAM}}/jobs", "folder", "Holds all of this repo's jobs", 1],
+    ["ws", "/Teams/{{TEAM}}/jobs/sample-etl", "folder", "This job's code", 1],
+    ["ws", ".../sample-etl/src/ingest", "notebook", "Writes 1,000 test rows to {{CAT}}.raw.sample_events", 1],
+    ["ws", ".../sample-etl/src/transform", "notebook", "Sums them per hour into {{CAT}}.curated.hourly_spend", 1],
+    ["ws", "{{TEAM}}-sample-etl", "job", "1 x m5d.large under {{TEAM}}-job-policy; transform runs after ingest; daily 06:00 UTC schedule, paused in int", 1],
+    ["ws", "job permissions", "permissions", "Managers can run it, members can view it, the deploy robot owns it", 1],
+    ["aws", "jobs/int/{{TEAM}}/{{JOBS_REPO}}.tfstate", "state file", "Terraform's record of the job", 1, false],
+  ],
+  how: [
+    "Push the jobs repo (no edits needed for the sample job):",
+    { code: "cd databricks-automation/databricks-jobs\ngit init -b main\ngit add .\ngit commit -m \"{{TEAM}} jobs\"\ngit remote add origin git@github.com:{{ORG}}/{{JOBS_REPO}}.git\ngit push -u origin main" },
+    "GitHub &gt; <b>Actions</b> &gt; <b>jobs-deploy</b>: watch <b>apply</b>. The <b>Summary</b> lists the job with a link.",
+  ],
+  check: ["Apply ends with <b>Resources: 7 added</b>", "Workspace &gt; <b>Jobs &amp; Pipelines</b> shows <code>{{TEAM}}-sample-etl</code>"],
+  watch: ["<b>Validation failed for node_type_id</b>: the job asks for a machine the team policy does not allow."],
+},
+{
+  id: "s13", short: "Run the job", where: "ci", kind: "run", time: "6-10 min",
+  title: "Run the job from GitHub and see the tables",
+  plain: "The <b>jobs-run</b> workflow starts the job and waits. Databricks starts a temporary machine (a <b>job cluster</b>), runs <code>ingest</code>, then <code>transform</code>, and switches the machine off again. The result is two tables in the team catalog.",
+  who: "You, in GitHub", what: "Actions > jobs-run > Run workflow", sub: "scripts/run_job.py",
+  inputs: [
+    ["environment", "int", "you"],
+    ["job", "sample-etl", "folder name under jobs/"],
+    ["wait", "true", "you"],
+  ],
+  outputs: [
+    ["Run link", "https://dbc-.../jobs/.../runs/...", "the run summary"],
+    ["Result", "SUCCESS (the workflow fails if the job fails)", "you"],
+  ],
+  res: [
+    ["ws", "job run", "run of {{TEAM}}-sample-etl", "One execution of the job", 1],
+    ["ws", "job cluster", "1 x m5d.large driver + 1 worker", "Temporary machines, deleted when the run ends", 1],
+    ["data", "{{CAT}}.raw.sample_events", "table", "1,000 test events", 1],
+    ["data", "{{CAT}}.curated.hourly_spend", "table", "Events, customers and spend per hour", 1],
+  ],
+  log: ["Started {{TEAM}}-sample-etl (job 1234), run 5678: https://dbc-.../jobs/1234/runs/5678", "  PENDING   (starting the job cluster)", "  RUNNING   ingest", "  RUNNING   transform", "  TERMINATED SUCCESS", "Run 5678 succeeded."],
+  how: [
+    "GitHub &gt; jobs repo &gt; <b>Actions</b> &gt; <b>jobs-run</b> &gt; <b>Run workflow</b>.",
+    "Choose environment <code>int</code>, job <code>sample-etl</code>, tick <b>wait</b>, click <b>Run workflow</b>.",
+    "When it is green, open the workspace &gt; <b>SQL Editor</b>, pick <code>{{TEAM}}-warehouse</code>, and run:",
+    { code: "SELECT * FROM {{CAT}}.curated.hourly_spend ORDER BY hour DESC;" },
+  ],
+  check: ["jobs-run is green", "The query returns rows"],
+  watch: ["The schedule stays paused in int (<code>paused_in: [int]</code>), so the job only runs when you start it."],
+},
+{
+  id: "s14", short: "Lock main", where: "gh", kind: "manual", time: "5 min",
+  title: "Lock the main branches so every change is reviewed",
+  plain: "From now on nobody should push straight to <code>main</code>. A <b>ruleset</b> makes every change a pull request: the CI workflow posts a plan (what would be created, changed or deleted), a code owner approves, and merging deploys to int.",
+  who: "You, in GitHub", what: "Settings > Rules > Rulesets", sub: "both repos",
+  inputs: [
+    ["Status check names", "platform: \"fmt, validate, test\", \"plan (int)\"; jobs: \"fmt, test\", \"plan (int)\"", "the CI workflows"],
+    ["Code owners", ".github/CODEOWNERS", "step 5"],
+  ],
+  outputs: [
+    ["Reviewed changes", "PR > plan comment > approval > merge > deploy", "every later change"],
+  ],
+  res: [
+    ["gh", "main ruleset ({{PLATFORM_REPO}})", "branch ruleset", "PR required, 1 approval, code owner review, checks must pass, no force push", 1],
+    ["gh", "main ruleset ({{JOBS_REPO}})", "branch ruleset", "Same for the jobs repo", 1],
+  ],
+  how: [
+    "In each repo: <b>Settings</b> &gt; <b>Rules</b> &gt; <b>Rulesets</b> &gt; <b>New branch ruleset</b>. Target: <b>Default branch</b>.",
+    "Turn on <b>Require a pull request before merging</b> (1 approval, <b>Require review from Code Owners</b>).",
+    "Turn on <b>Require status checks to pass</b> and add the check names (they appear after the first pull request has run).",
+    "Turn on <b>Block force pushes</b>. Save.",
+  ],
+  check: ["A test push to main is refused"],
+  watch: ["Add the status checks after the CI workflow has run once on a pull request, or GitHub cannot find their names."],
+},
+);
+
+/* ---------- onboarding another team ---------- */
+const TEAM_STEPS = [
+{
+  id: "t1", short: "Team file + PR", where: "file", kind: "git", time: "10 min",
+  title: "Write teams/fin.yaml and open a pull request",
+  plain: "A new team is one new file. The pull request runs <b>platform-ci</b>, which checks the file and posts a <b>plan</b> as a comment: a list of what would be created. Nothing is created yet.",
+  who: "Team lead", what: "New file + pull request", sub: "platform-ci posts the plan",
+  inputs: [["teams/_template.yaml", "copy", "the repo"], ["Team e-mails", "managers, members", "the team"], ["Jobs repo", "{{ORG}}/fin-jobs", "the team"]],
+  outputs: [["Plan comment", "1-infra: no changes, 2-workspace: no changes, 3-teams: 46 to add with the template defaults", "the reviewer"]],
+  res: [
+    ["file", "teams/fin.yaml", "team file", "name: fin, environments: [int], managers, members, job_repos, limits", 1],
+    ["gh", "team/fin", "branch + pull request", "The change to review", 1],
+    ["ci", "platform-ci", "workflow run", "Format check, offline tests, plan for int", 1],
+    ["gh", "plan comment", "PR comment", "Exactly what would be created for fin", 1],
+  ],
+  log: ["$ git checkout -b team/fin && cp teams/_template.yaml teams/fin.yaml", "$ git push -u origin team/fin   # open the pull request", "platform-ci: fmt, validate, test ... passed", "platform-ci: plan (int) ... 3-teams: Plan: 46 to add, 0 to change, 0 to destroy"],
+  how: [
+    { code: "cd databricks-platform\ngit checkout -b team/fin\ncp teams/_template.yaml teams/fin.yaml\n# edit: name: fin, environments: [int], managers, members, job_repos: [{{ORG}}/fin-jobs]\ngit add teams/fin.yaml\ngit commit -m \"Onboard team fin (int)\"\ngit push -u origin team/fin" },
+    "Open the pull request in GitHub and wait for the plan comment.",
+  ],
+  check: ["The comment shows changes only for fin"],
+  watch: ["A typo in a key or a missing <code>environments</code> list fails the check with the file and key named."],
+},
+{
+  id: "t2", short: "Approve + merge", where: "ci", kind: "tf", time: "5 min",
+  title: "A platform admin approves; merging creates the team",
+  plain: "A code owner reads the plan and approves. Merging runs <b>platform-deploy</b> for int, which repeats step 9 for <code>fin</code> only. The summary has fin's hand-off values.",
+  who: "Platform admin", what: "Approve, merge", sub: "platform-deploy for int",
+  inputs: [["The pull request", "with the plan comment", "previous step"]],
+  outputs: [["Hand-off for fin", "7 variables", "next step"]],
+  res: [
+    ["dbx", "{{PREFIX}}-int-fin-users, -managers", "2 groups + 3 memberships + 2 workspace assignments", "The team's people (1 manager, 1 member in the template)", 7],
+    ["dbx", "{{PREFIX}}-int-fin-deploy", "robot + membership + assignment + access rule + timer + OAuth secret", "The team's deploy robot", 6],
+    ["uc", "int_fin", "bucket (6) + IAM role (2) + wait + credential + location (2) + catalog + 2 schemas + grants", "The team's data", 16],
+    ["ws", "fin-job-policy, fin-interactive-policy, fin-warehouse", "2 policies + warehouse + 3 permissions", "Limits and SQL", 6],
+    ["ws", "/Teams/fin, scope fin, entitlements", "folder (2) + secret scope (3) + entitlements (2)", "Code, passwords, log-in rights", 7],
+    ["aws", "{{PREFIX}}-int-fin-jobs-ci + databricks/int/teams/fin/deploy-sp", "IAM role + policy + secret + value", "The jobs repo's login", 4],
+  ],
+  how: ["Reviewer: <b>Files changed</b> &gt; read the plan comment &gt; <b>Review changes</b> &gt; <b>Approve</b>.", "<b>Merge pull request</b>. Watch <b>Actions &gt; platform-deploy</b>."],
+  check: ["The summary shows a hand-off section for fin"],
+  watch: ["Removing a team later: run its jobs-destroy first, then delete its file in a pull request."],
+},
+{
+  id: "t3", short: "Team's jobs repo", where: "gh", kind: "manual", time: "10 min",
+  title: "The team sets up its jobs repo and deploys",
+  plain: "Exactly steps 11 and 12, with fin's values. The jobs run as <code>{{PREFIX}}-int-fin-deploy</code> and write to <code>int_fin</code>.",
+  who: "Team fin", what: "Repo + environment + push", sub: "jobs-deploy",
+  inputs: [["fin hand-off", "7 variables", "previous step"]],
+  outputs: [["Jobs fin-*", "in the workspace", "the team"]],
+  res: [
+    ["gh", "{{ORG}}/fin-jobs", "repo (copy of {{JOBS_REPO}})", "Mark the jobs repo as a template repository to copy it in one click", 1],
+    ["gh", "int", "environment + 7 variables", "fin's hand-off", 8],
+    ["ws", "fin-<job>", "jobs + notebooks", "The team's real jobs", 1],
+  ],
+  how: ["Create <code>{{ORG}}/fin-jobs</code> from the jobs repo, add environment <code>int</code> with fin's 7 variables.", "Replace <code>jobs/sample-etl</code> with the team's jobs (copy <code>jobs/_template</code>) and push."],
+  check: ["jobs-deploy is green and lists the fin jobs"],
+  watch: ["Machine types and sizes must fit <code>fin-job-policy</code>."],
+},
+];
+
+const GLOSSARY = [
+  ["Terraform", "A program that reads .tf files describing cloud resources and creates, changes or deletes them to match."],
+  ["State", "Terraform's record of what it created. Kept in the state bucket so every run knows what already exists."],
+  ["Plan / apply", "Plan lists what Terraform would do. Apply does it."],
+  ["Stack", "One Terraform folder with its own state. The platform has three, applied in order: 1-infra, 2-workspace, 3-teams."],
+  ["OIDC", "A way for GitHub Actions to prove to AWS which repo and environment it is, so AWS can hand out short-lived access without stored passwords."],
+  ["IAM role", "A set of AWS permissions that a person, a program or GitHub can temporarily take on."],
+  ["Permissions boundary", "An upper limit attached to a role. Even if the role's own policy says more, it can never do more than the boundary allows."],
+  ["VPC, subnet", "A private network in AWS, split into smaller ranges (subnets) in different data centres (availability zones)."],
+  ["NAT gateway", "Lets machines in private subnets reach the internet while nothing on the internet can reach them."],
+  ["Security group", "A firewall around machines: which ports they may use and with whom."],
+  ["Workspace", "Your Databricks environment: notebooks, jobs, clusters and SQL, at its own web address."],
+  ["Unity Catalog, metastore", "Databricks' central list of data and who may use it. One metastore per region; workspaces attach to it."],
+  ["Catalog, schema, table", "Three levels of folders for data: catalog int_cpps, schema raw, table sample_events."],
+  ["Storage credential, external location", "How Unity Catalog reaches an S3 bucket: a key (an IAM role) and the registered bucket address."],
+  ["Service principal", "A robot user in Databricks, used by pipelines and jobs instead of a person."],
+  ["OAuth secret", "The password of a service principal (used with its client ID)."],
+  ["Cluster, job cluster", "Machines that run Spark code. A job cluster is started for one job run and deleted afterwards."],
+  ["Cluster policy", "Rules for clusters a team may start: machine types, sizes, tags."],
+  ["SQL warehouse", "Machines that run SQL queries; they stop by themselves when idle."],
+  ["Secret scope", "A safe inside the workspace for passwords that jobs read at run time."],
+  ["GitHub environment", "A named set of variables and secrets in a repo. A workflow job only sees them if it names that environment."],
+  ["Workflow", "An automated pipeline in GitHub Actions, started by a push, a pull request or a click."],
+  ["Pull request (PR)", "A proposed change that others review before it is merged into main."],
+  ["Hand-off", "The 7 values the platform run prints so a team's jobs repo can log in and find its resources."],
+];
+
+/* ---------- engine: render steps, fill values, animate ---------- */
+const $ = id => document.getElementById(id);
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+const REDUCED = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+const G = {
+  laptop: ["your laptop", "c-laptop", "--orange"], aws: ["AWS", "c-aws", "--yellow"], dbx: ["Databricks account", "c-dbx", "--red"],
+  uc: ["Unity Catalog", "c-uc", "--teal"], ws: ["Workspace", "c-ws", "--pink"], gh: ["GitHub", "c-gh", "--purple"],
+  ci: ["GitHub Actions", "c-ci", "--blue"], file: ["file", "c-file", "--green"], data: ["data", "c-data", "--gray"],
+};
+document.head.insertAdjacentHTML("beforeend", "<style>:root{--pink:#ff7eb6}" +
+  Object.entries(G).map(([k, g]) => `.tile[data-g=${k}]{border-left-color:var(${g[2]})}`).join("") + "</style>");
+
+/* ---------- your values ---------- */
+const VKEY = "dbx-guide-values-v2";
+const inputs = [...document.querySelectorAll("[data-v]")];
+const saved = JSON.parse(localStorage.getItem(VKEY) || "{}");
+inputs.forEach(i => { if (saved[i.dataset.v]) i.value = saved[i.dataset.v]; });
+let V = {};
+function readValues() {
+  const v = {};
+  inputs.forEach(i => v[i.dataset.v] = i.value.trim() || i.defaultValue);
+  v.P = `${v.PREFIX}-int`;
+  v.PT = `${v.PREFIX}-int-${v.TEAM}`;
+  v.CAT = `int_${v.TEAM}`;
+  v.STATE_BUCKET = `${v.PREFIX}-int-${v.AWS_ACCOUNT}-tfstate`;
+  v.CI_ROLE = `arn:aws:iam::${v.AWS_ACCOUNT}:role/github-${v.PREFIX}-int-platform`;
+  v.JOBS_ROLE = `arn:aws:iam::${v.AWS_ACCOUNT}:role/${v.PREFIX}-int-${v.TEAM}-jobs-ci`;
+  v.SECRET_ID = `databricks/int/teams/${v.TEAM}/deploy-sp`;
+  V = v;
+  const s = {};
+  inputs.forEach(i => s[i.dataset.v] = i.value.trim());
+  localStorage.setItem(VKEY, JSON.stringify(s));
+}
+// Fill {{TOKENS}}. In HTML, only the token values are escaped (the guide's own text is trusted).
+const T = (s, html = true) => String(s ?? "").replace(/\{\{([A-Z_]+)\}\}/g, (m, k) => V[k] == null ? m : (html ? esc(V[k]) : V[k]));
+
+/* ---------- rendering ---------- */
+const LABEL = { tf: "Resources Terraform creates", manual: "What you create or check", git: "What appears in GitHub", run: "What the run creates" };
+const DONE = { tf: "created", manual: "done", git: "done", run: "created" };
+const counted = s => s.res.filter(r => r[5] !== false && r[0] !== "laptop").reduce((a, r) => a + (r[4] || 1), 0);
+
+function chip(r, out) {
+  return `<div class="chip"><b>${T(r[0])}</b>${r[1] ? `<span>${T(r[1])}</span>` : ""}<i>${out ? "used in" : "from"}: ${T(r[2])}</i></div>`;
+}
+function tile(r) {
+  const g = G[r[0]];
+  return `<div class="tile" data-g="${r[0]}" data-n="${r[4] || 1}" data-c="${r[5] !== false && r[0] !== "laptop" ? 1 : 0}">
+    <div class="top"><span class="pill g ${g[1]}">${g[0]}</span><span class="st">waiting</span></div>
+    <div class="nm">${T(r[1])}${(r[4] || 1) > 1 ? ` <span class="muted">x${r[4]}</span>` : ""}</div>
+    <div class="ty">${T(r[2])}</div><div class="wh">${T(r[3])}</div></div>`;
+}
+function howList(items) {
+  const lis = [];
+  for (const it of items) {
+    if (typeof it === "string") lis.push(`<li>${T(it)}`);
+    else {
+      const block = `<div class="code"><pre data-code="${esc(it.code)}"></pre></div>`;
+      if (lis.length) lis[lis.length - 1] += block; else lis.push(`<li>${block}`);
+    }
+  }
+  return `<ol>${lis.map(l => l + "</li>").join("")}</ol>`;
+}
+function renderStep(s, num) {
+  const g = G[s.where];
+  return `<section class="sstep" id="${s.id}" data-id="${s.id}">
+    <div class="shead"><span class="badge">${num}</span><h3>${T(s.title)}</h3>
+      <span class="pill ${g[1]}">${g[0]}</span><span class="time">${esc(s.time)}</span>
+      <label><input type="checkbox" class="done-chk"> done</label></div>
+    <div class="plain"><b class="t">In plain words</b>${T(s.plain)}</div>
+    <div class="scene">
+      <div class="col in"><h5>What you give it (inputs)</h5>${s.inputs.map(r => chip(r, false)).join("")}</div>
+      <div class="action"><span class="arrowL">&#8594;</span><span class="arrowR">&#8594;</span>
+        <div class="who"><span class="pill ${g[1]}">${T(s.who)}</span></div>
+        <div class="what">${T(s.what)}</div><div class="sub">${T(s.sub)}</div><div class="meter"><i></i></div></div>
+      <div class="col out"><h5>What you get (outputs)</h5>${s.outputs.map(r => chip(r, true)).join("")}</div>
+    </div>
+    <div class="reshead"><h4>${LABEL[s.kind]}</h4><span class="count">0 / ${counted(s)}${s.kind === "tf" ? " resources" : ""}</span></div>
+    <div class="tiles">${s.res.map(tile).join("")}</div>
+    <div class="console"></div>
+    <div class="playrow"><button class="btn" data-play>Play this step</button><span class="muted" style="font-size:12.5px">The animation also starts when you scroll here.</span></div>
+    <div class="how"><h4>Do this</h4>${howList(s.how)}</div>
+    <div class="twocol">
+      <div class="chk"><h4>Check it worked</h4><ul>${s.check.map(x => `<li>${T(x)}</li>`).join("")}</ul></div>
+      <div class="watch"><h4>If something goes wrong</h4><ul>${s.watch.map(x => `<li>${T(x)}</li>`).join("")}</ul></div>
+    </div>
+  </section>`;
+}
+
+const ALL = [...STEPS.map((s, i) => [s, String(i + 1)]), ...TEAM_STEPS.map((s, i) => [s, "T" + (i + 1)])];
+const BY_ID = Object.fromEntries(ALL.map(([s, n]) => [s.id, { s, n }]));
+const played = new Set();
+
+function renderAll() {
+  readValues();
+  $("steps").innerHTML =
+    `<section class="block" id="setup"><h2><span class="n">1-5</span>Setup by hand (once)</h2><p class="lead">Accounts, the AWS bootstrap, the Databricks robot login, the GitHub repo and the settings files.</p></section>` +
+    STEPS.slice(0, 5).map((s, i) => renderStep(s, i + 1)).join("") +
+    `<section class="block" id="pipeline"><h2><span class="n">6-10</span>The platform pipeline</h2><p class="lead">One push starts one workflow run that builds everything in three parts.</p></section>` +
+    STEPS.slice(5, 10).map((s, i) => renderStep(s, i + 6)).join("") +
+    `<section class="block" id="jobpipe"><h2><span class="n">11-14</span>The job pipeline</h2><p class="lead">The team's jobs repo deploys the job, runs it, and both repos are locked for review.</p></section>` +
+    STEPS.slice(10).map((s, i) => renderStep(s, i + 11)).join("");
+  $("teamSteps").innerHTML = TEAM_STEPS.map((s, i) => renderStep(s, "T" + (i + 1))).join("");
+  document.querySelectorAll("pre[data-code]").forEach(p => { p.textContent = T(p.dataset.code, false); addCopy(p.parentElement); });
+  document.querySelectorAll(".sstep").forEach(sec => {
+    sec.querySelector("[data-play]").onclick = () => play(sec);
+    const c = sec.querySelector(".done-chk");
+    c.checked = done.has(sec.dataset.id);
+    sec.classList.toggle("done", c.checked);
+    c.onchange = () => { c.checked ? done.add(sec.dataset.id) : done.delete(sec.dataset.id); progress(); };
+    if (played.has(sec.dataset.id)) finish(sec);
+    io.observe(sec);
+    so.observe(sec);
+  });
+  $("journey").innerHTML = STEPS.map((s, i) => `<div class="jstep" data-to="${s.id}"><span class="ok">&#10003;</span><div class="num">${i + 1}</div><div class="nm">${esc(T(s.short, false))}</div></div>`).join("");
+  document.querySelectorAll(".jstep").forEach(j => j.onclick = () => $(j.dataset.to).scrollIntoView({ behavior: "smooth", block: "start" }));
+  $("gloss").innerHTML = GLOSSARY.map(([k, d]) => `<dt>${esc(k)}</dt><dd>${esc(d)}</dd>`).join("");
+  progress();
+}
+
+function addCopy(box) {
+  const b = document.createElement("button");
+  b.textContent = "copy";
+  b.onclick = async () => {
+    const text = box.querySelector("pre").textContent;
+    try { await navigator.clipboard.writeText(text); } catch (e) {
+      const r = document.createRange(); r.selectNodeContents(box.querySelector("pre"));
+      const sel = getSelection(); sel.removeAllRanges(); sel.addRange(r); document.execCommand("copy"); sel.removeAllRanges();
+    }
+    b.textContent = "copied"; b.classList.add("ok");
+    setTimeout(() => { b.textContent = "copy"; b.classList.remove("ok"); }, 1400);
+  };
+  box.appendChild(b);
+}
+
+/* ---------- progress ---------- */
+const PKEY = "dbx-guide-done-v2";
+const done = new Set(JSON.parse(localStorage.getItem(PKEY) || "[]"));
+function progress() {
+  const total = ALL.length;
+  $("progTxt").textContent = `${done.size} / ${total} steps`;
+  $("progBar").style.width = `${Math.round(100 * done.size / total)}%`;
+  document.querySelectorAll(".sstep").forEach(s => s.classList.toggle("done", done.has(s.dataset.id)));
+  document.querySelectorAll(".jstep").forEach(j => j.classList.toggle("done", done.has(j.dataset.to)));
+  localStorage.setItem(PKEY, JSON.stringify([...done]));
+}
+$("resetProgress").onclick = () => { done.clear(); document.querySelectorAll(".done-chk").forEach(c => c.checked = false); progress(); };
+
+/* ---------- animation ---------- */
+function logLine(con, cls, text) {
+  const d = document.createElement("div");
+  if (cls) d.className = cls;
+  d.textContent = text;
+  con.appendChild(d);
+  con.scrollTop = con.scrollHeight;
+}
+
+function reset(sec) {
+  sec.querySelectorAll(".chip").forEach(c => c.classList.remove("show", "lit"));
+  sec.querySelectorAll(".tile").forEach(t => { t.classList.remove("creating", "made"); t.querySelector(".st").textContent = "waiting"; });
+  const a = sec.querySelector(".action");
+  a.classList.remove("run", "fin");
+  const m = a.querySelector(".meter i");
+  m.style.transition = "none"; m.style.width = "0";
+  sec.querySelector(".console").innerHTML = "";
+  setCount(sec, 0);
+}
+function setCount(sec, n) {
+  const { s } = BY_ID[sec.dataset.id];
+  sec.querySelector(".count").textContent = `${n} / ${counted(s)}${s.kind === "tf" ? " resources" : ""}`;
+}
+
+// Show the end state at once (reduced motion, or after re-rendering a step that already played).
+function finish(sec) {
+  const { s } = BY_ID[sec.dataset.id];
+  sec._token = null; // stop an animation that is still running on this step
+  sec.querySelectorAll(".chip").forEach(c => c.classList.add("show", "lit"));
+  sec.querySelectorAll(".tile").forEach(t => { t.classList.add("made"); t.querySelector(".st").textContent = DONE[s.kind]; });
+  const a = sec.querySelector(".action");
+  a.classList.add("fin");
+  a.querySelector(".meter i").style.width = "100%";
+  const con = sec.querySelector(".console");
+  con.innerHTML = "";
+  consoleLines(s).forEach(([cls, t]) => logLine(con, cls, t));
+  setCount(sec, counted(s));
+}
+
+// Console text for a step: real-looking Terraform output for tf steps, the step's own log otherwise.
+function consoleLines(s) {
+  const out = [];
+  if (s.kind === "tf") {
+    out.push(["h", "$ " + T(s.what, false)]);
+    s.res.forEach(r => { if (r[0] !== "laptop" && r[5] !== false) out.push(["a", `+ ${T(r[1], false)} (${T(r[2], false)}): Creation complete`]); });
+    out.push(["a", `Apply complete! Resources: ${counted(s)} added, 0 changed, 0 destroyed.`]);
+  } else {
+    (s.log || s.res.map(r => "\u2713 " + T(r[1], false))).forEach(l => out.push(["", T(l, false)]));
+  }
+  return out;
+}
+
+async function play(sec) {
+  const { s } = BY_ID[sec.dataset.id];
+  played.add(s.id);
+  if (REDUCED) { finish(sec); return; }
+  const token = Symbol();
+  sec._token = token;
+  const alive = () => sec._token === token;
+  reset(sec);
+  const con = sec.querySelector(".console");
+  const chipsIn = [...sec.querySelectorAll(".col.in .chip")];
+  const chipsOut = [...sec.querySelectorAll(".col.out .chip")];
+  const tiles = [...sec.querySelectorAll(".tile")];
+  const per = Math.max(110, Math.min(380, 4800 / tiles.length));
+
+  for (const c of chipsIn) { if (!alive()) return; c.classList.add("show"); await sleep(170); }
+  const a = sec.querySelector(".action");
+  a.classList.add("run");
+  const meter = a.querySelector(".meter i");
+  meter.style.transition = `width ${Math.round(per * tiles.length)}ms linear`;
+  void meter.offsetWidth; // apply width 0 first so the fill animates
+  meter.style.width = "100%";
+
+  const lines = consoleLines(s);
+  let li = 0;
+  if (s.kind === "tf") logLine(con, lines[li][0], lines[li++][1]);
+  const logEvery = s.kind === "tf" ? 1 : Math.max(1, Math.ceil(tiles.length / Math.max(1, lines.length)));
+  let n = 0;
+  for (let k = 0; k < tiles.length; k++) {
+    if (!alive()) return;
+    const t = tiles[k];
+    t.classList.add("creating");
+    t.querySelector(".st").textContent = s.kind === "tf" ? "creating..." : "...";
+    if (s.kind === "tf") logLine(con, "c", `+ ${t.querySelector(".nm").textContent.trim()}: Creating...`);
+    await sleep(per * 0.6);
+    if (!alive()) return;
+    t.classList.remove("creating");
+    t.classList.add("made");
+    t.querySelector(".st").textContent = DONE[s.kind];
+    if (t.dataset.c === "1") n += +t.dataset.n;
+    setCount(sec, n);
+    if (li < lines.length - (s.kind === "tf" ? 1 : 0) && (k % logEvery === 0)) logLine(con, lines[li][0], lines[li++][1]);
+    await sleep(per * 0.4);
+  }
+  while (li < lines.length) logLine(con, lines[li][0], lines[li++][1]);
+  a.classList.remove("run");
+  a.classList.add("fin");
+  for (const c of chipsOut) { if (!alive()) return; c.classList.add("show", "lit"); await sleep(200); }
+  chipsIn.forEach(c => c.classList.add("lit"));
+}
+
+/* ---------- scroll: autoplay, journey highlight, nav highlight ---------- */
+let touring = false;
+const io = new IntersectionObserver(es => es.forEach(e => {
+  if (e.isIntersecting && !played.has(e.target.dataset.id) && !touring) play(e.target);
+}), { threshold: 0.3 });
+const navLinks = [...document.querySelectorAll("nav a")];
+const so = new IntersectionObserver(es => es.forEach(e => {
+  if (!e.isIntersecting) return;
+  const id = e.target.id;
+  document.querySelectorAll(".jstep").forEach(j => j.classList.toggle("here", j.dataset.to === id));
+  const n = BY_ID[id] ? parseInt(BY_ID[id].n, 10) : NaN;
+  const target = isNaN(n) ? (id.startsWith("t") ? "team" : id) : (n <= 5 ? "s1" : n <= 10 ? "s6" : "s11");
+  navLinks.forEach(a => a.classList.toggle("active", a.getAttribute("href") === "#" + target));
+}), { rootMargin: "-35% 0px -60% 0px" });
+document.querySelectorAll("section.block[id]").forEach(s => so.observe(s));
+
+/* ---------- tour ---------- */
+$("tourBtn").onclick = async () => {
+  if (touring) { touring = false; return; }
+  touring = true;
+  $("tourBtn").textContent = "Stop the tour";
+  for (let i = 0; i < STEPS.length && touring; i++) {
+    const sec = $(STEPS[i].id);
+    $("tourTxt").textContent = `Step ${i + 1} of ${STEPS.length}: ${T(STEPS[i].short, false)}`;
+    sec.scrollIntoView({ behavior: REDUCED ? "auto" : "smooth", block: "start" });
+    await sleep(REDUCED ? 300 : 800);
+    if (!touring) break;
+    await play(sec);
+    await sleep(REDUCED ? 1200 : 1600);
+  }
+  touring = false;
+  $("tourBtn").textContent = "Take the tour";
+  $("tourTxt").textContent = "";
+};
+
+inputs.forEach(i => i.addEventListener("input", renderAll));
+renderAll();
+</script>
+</body>
+</html>

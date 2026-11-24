@@ -1,0 +1,9 @@
+# Copy to int.tfvars and fill in. Then:
+#   terraform init
+#   terraform apply -var-file=int.tfvars
+environment                 = "int"
+name_prefix                 = "dbx"
+aws_region                  = "us-east-1"
+github_org                  = "my-org" # CHANGE ME
+github_repo                 = "databricks-platform"
+create_github_oidc_provider = true # false if the AWS account already has the GitHub OIDC provider

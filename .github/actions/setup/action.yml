@@ -1,0 +1,46 @@
+name: setup
+description: Log in to AWS with GitHub OIDC and install Terraform.
+
+inputs:
+  aws-role-arn:
+    description: IAM role to assume (GitHub environment variable AWS_ROLE_ARN).
+    required: true
+  aws-region:
+    description: AWS region (GitHub environment variable AWS_REGION).
+    required: true
+  terraform-version:
+    description: Terraform CLI version.
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - name: Check GitHub environment settings
+      shell: bash
+      env:
+        ROLE: ${{ inputs.aws-role-arn }}
+        REGION: ${{ inputs.aws-region }}
+      run: |
+        missing=()
+        [[ -n "$ROLE" ]] || missing+=("variable AWS_ROLE_ARN")
+        [[ -n "$REGION" ]] || missing+=("variable AWS_REGION")
+        [[ -n "${TF_STATE_BUCKET:-}" ]] || missing+=("variable TF_STATE_BUCKET")
+        [[ -n "${DATABRICKS_CLIENT_ID:-}" ]] || missing+=("secret DATABRICKS_CLIENT_ID")
+        [[ -n "${DATABRICKS_CLIENT_SECRET:-}" ]] || missing+=("secret DATABRICKS_CLIENT_SECRET")
+        if (( ${#missing[@]} )); then
+          echo "::error::The GitHub environment is missing: ${missing[*]}. See README.md, step 4."
+          exit 1
+        fi
+
+    - name: AWS credentials (OIDC)
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        role-to-assume: ${{ inputs.aws-role-arn }}
+        aws-region: ${{ inputs.aws-region }}
+        role-session-name: databricks-platform-${{ github.run_id }}
+
+    - name: Terraform
+      uses: hashicorp/setup-terraform@v3
+      with:
+        terraform_version: ${{ inputs.terraform-version }}
+        terraform_wrapper: false

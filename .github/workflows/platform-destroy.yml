@@ -1,0 +1,76 @@
+# Tears an environment down: 3-teams -> 2-workspace -> 1-infra.
+# Meant for int (test) environments. Data is only deleted where config safety.allow_destroy_data is true;
+# otherwise Terraform stops at the first bucket or catalog that still has data.
+name: platform-destroy
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: Environment to destroy
+        type: choice
+        options: [int, qa]
+        default: int
+      stacks:
+        description: What to destroy (later stacks first)
+        type: choice
+        options: [all, 3-teams, 2-workspace-and-teams]
+        default: 3-teams
+      confirm:
+        description: Type the environment name again to confirm
+        type: string
+        required: true
+
+permissions:
+  contents: read
+
+env:
+  TF_VERSION: "1.15.5"
+
+jobs:
+  destroy:
+    name: destroy (${{ inputs.environment }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    environment: ${{ inputs.environment }}
+    concurrency:
+      group: platform-${{ inputs.environment }}
+      cancel-in-progress: false
+    permissions:
+      contents: read
+      id-token: write
+    env:
+      ENV_NAME: ${{ inputs.environment }}
+      STACKS: ${{ inputs.stacks }}
+      TF_STATE_BUCKET: ${{ vars.TF_STATE_BUCKET }}
+      AWS_REGION: ${{ vars.AWS_REGION }}
+      DATABRICKS_CLIENT_ID: ${{ secrets.DATABRICKS_CLIENT_ID }}
+      DATABRICKS_CLIENT_SECRET: ${{ secrets.DATABRICKS_CLIENT_SECRET }}
+    steps:
+      - name: Confirm
+        env:
+          CONFIRM: ${{ inputs.confirm }}
+        run: |
+          if [[ "$CONFIRM" != "$ENV_NAME" ]]; then
+            echo "::error::Type '$ENV_NAME' in the confirm box to destroy $ENV_NAME."
+            exit 1
+          fi
+
+      - uses: actions/checkout@v4
+
+      - uses: ./.github/actions/setup
+        with:
+          aws-role-arn: ${{ vars.AWS_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+          terraform-version: ${{ env.TF_VERSION }}
+
+      - name: destroy 3-teams
+        run: scripts/tf.sh destroy "$ENV_NAME" 3-teams
+
+      - name: destroy 2-workspace
+        if: env.STACKS != '3-teams'
+        run: scripts/tf.sh destroy "$ENV_NAME" 2-workspace
+
+      - name: destroy 1-infra
+        if: env.STACKS == 'all'
+        run: scripts/tf.sh destroy "$ENV_NAME" 1-infra

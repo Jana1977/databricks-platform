@@ -1,0 +1,10 @@
+# Copy to qa.tfvars and fill in. Run in a separate folder copy or with a separate state:
+#   terraform init
+#   terraform workspace new qa   (keeps qa's bootstrap state apart from int's)
+#   terraform apply -var-file=qa.tfvars
+environment                 = "qa"
+name_prefix                 = "dbx"
+aws_region                  = "us-east-1"
+github_org                  = "my-org" # CHANGE ME
+github_repo                 = "databricks-platform"
+create_github_oidc_provider = false # false when qa is in the same AWS account as int

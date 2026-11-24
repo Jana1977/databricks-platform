@@ -1,0 +1,55 @@
+# Platform settings for the qa environment.
+# Same keys as int.yaml. qa is deployed by hand (Actions > platform-deploy > environment: qa).
+
+environment: qa
+name_prefix: dbx
+
+aws:
+  account_id: "222222222222"   # CHANGE ME: AWS account for qa (can be the same account as int)
+  region: us-east-1
+
+databricks:
+  account_id: "00000000-0000-0000-0000-000000000000"   # CHANGE ME: same Databricks account as int
+  workspace_name: ""
+  admins:
+    - platform-admin@example.com   # CHANGE ME
+  create_users: false
+
+unity_catalog:
+  metastore_id: ""
+  create_metastore: false     # int and qa in the same region share one metastore
+  assign_metastore: true
+  platform_catalog: true
+
+network:
+  vpc_cidr: 10.30.0.0/16
+  private_subnet_cidrs:
+    - 10.30.0.0/19
+    - 10.30.32.0/19
+  public_subnet_cidrs:
+    - 10.30.64.0/24
+    - 10.30.65.0/24
+  availability_zones: []
+  nat_gateway_count: 2        # one per AZ
+  interface_endpoints: true
+  flow_logs: true
+  privatelink:
+    enabled: false
+    subnet_cidrs:
+      - 10.30.66.0/27
+      - 10.30.66.32/27
+    public_access_enabled: true
+    workspace_service: ""
+    relay_service: ""
+
+workspace:
+  token_max_lifetime_days: 90
+  ip_allow_list: []
+  restrict_workspace_admins: true
+  disable_legacy_features: true
+
+safety:
+  allow_destroy_data: false   # protect qa data from terraform destroy
+
+tags:
+  cost_center: data-platform

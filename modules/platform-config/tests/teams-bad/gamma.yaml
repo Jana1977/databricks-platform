@@ -1,0 +1,5 @@
+name: gamma
+environments: [int]
+managers: [lead@example.com]
+compute:
+  max_wrokers: 8   # typo on purpose: the config check must reject it

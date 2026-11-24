@@ -1,0 +1,82 @@
+# Applies the platform: 1-infra -> 2-workspace -> 3-teams.
+#   push to main        -> int
+#   Run workflow (UI)   -> int or qa, all stacks or one stack
+name: platform-deploy
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - config/**
+      - teams/**
+      - modules/**
+      - stacks/**
+      - scripts/**
+      - .github/workflows/platform-deploy.yml
+      - .github/actions/**
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: Environment
+        type: choice
+        options: [int, qa]
+        default: int
+      stacks:
+        description: Which stacks to apply
+        type: choice
+        options: [all, 1-infra, 2-workspace, 3-teams]
+        default: all
+
+permissions:
+  contents: read
+
+env:
+  TF_VERSION: "1.15.5"
+
+jobs:
+  deploy:
+    name: deploy (${{ inputs.environment || 'int' }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    environment: ${{ inputs.environment || 'int' }}
+    concurrency:
+      group: platform-${{ inputs.environment || 'int' }}
+      cancel-in-progress: false
+    permissions:
+      contents: read
+      id-token: write
+    env:
+      ENV_NAME: ${{ inputs.environment || 'int' }}
+      STACKS: ${{ inputs.stacks || 'all' }}
+      TF_STATE_BUCKET: ${{ vars.TF_STATE_BUCKET }}
+      AWS_REGION: ${{ vars.AWS_REGION }}
+      DATABRICKS_CLIENT_ID: ${{ secrets.DATABRICKS_CLIENT_ID }}
+      DATABRICKS_CLIENT_SECRET: ${{ secrets.DATABRICKS_CLIENT_SECRET }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: ./.github/actions/setup
+        with:
+          aws-role-arn: ${{ vars.AWS_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+          terraform-version: ${{ env.TF_VERSION }}
+
+      - name: apply 1-infra (network, workspace, metastore, admins)
+        if: env.STACKS == 'all' || env.STACKS == '1-infra'
+        run: scripts/tf.sh apply "$ENV_NAME" 1-infra
+
+      - name: wait until the workspace answers
+        if: env.STACKS == 'all' || env.STACKS == '1-infra' || env.STACKS == '2-workspace'
+        run: scripts/tf.sh wait-workspace "$ENV_NAME" 1-infra
+
+      - name: apply 2-workspace (settings, platform catalog)
+        if: env.STACKS == 'all' || env.STACKS == '2-workspace'
+        run: scripts/tf.sh apply "$ENV_NAME" 2-workspace
+
+      - name: apply 3-teams (one module per team file)
+        if: env.STACKS == 'all' || env.STACKS == '3-teams'
+        run: scripts/tf.sh apply "$ENV_NAME" 3-teams
+
+      - name: Summary + job repo hand-off
+        if: success()
+        run: scripts/handoff.sh "$ENV_NAME" >> "$GITHUB_STEP_SUMMARY"

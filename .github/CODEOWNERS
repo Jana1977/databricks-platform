@@ -1,0 +1,6 @@
+# Every change needs a platform admin's approval (turn on "Require review from Code Owners"
+# in the branch protection rule for main). Replace @my-org/databricks-platform-admins with your team.
+*                 @my-org/databricks-platform-admins
+
+# Teams may open PRs for their own file; a platform admin still approves.
+/teams/           @my-org/databricks-platform-admins

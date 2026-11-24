@@ -1,0 +1,3 @@
+name: alpha
+environments: [int, qa]
+managers: [lead@example.com]
