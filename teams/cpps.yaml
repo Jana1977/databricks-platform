@@ -5,9 +5,9 @@ description: Customer pod platform services
 environments: [int]          # add qa when the team is ready: [int, qa]
 
 managers:
-  - admin@data.com    # CHANGE ME
+  - admin@datajilla.com    # CHANGE ME
 members:
-  - dmin@datajilla.com    # CHANGE ME
+  - admin@datajilla.com    # CHANGE ME
 
 groups:
   analysts:
